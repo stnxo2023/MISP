@@ -69,6 +69,12 @@ class EventReport extends AppModel
         ),
     );
 
+    public $hasMany = [
+        'EventReportTag' => [
+            'dependent' => true
+        ],
+    ];
+
     public function beforeValidate($options = array())
     {
         $eventReport = &$this->data['EventReport'];
@@ -88,7 +94,7 @@ class EventReport extends AppModel
         // Set defaults for when some of the mandatory fields don't have defaults
         // These fields all have sane defaults either based on another field, or due to server settings
         if (!isset($eventReport['distribution'])) {
-            $eventReport['distribution'] = $this->Event->Attribute->defaultDistribution();
+            $eventReport['distribution'] = is_null(Configure::read('MISP.default_eventreport_distribution')) ? 5 : Configure::read('MISP.default_eventreport_distribution');
         }
         return true;
     }
@@ -569,7 +575,7 @@ class EventReport extends AppModel
             $objectTemplates = [];
         }
         $this->Galaxy = ClassRegistry::init('Galaxy');
-        $allowedGalaxies = $this->Galaxy->getAllowedMatrixGalaxies();
+        $allowedGalaxies = $this->Galaxy->getAllowedMatrixGalaxies($user);
         $allowedGalaxies = Hash::combine($allowedGalaxies, '{n}.Galaxy.uuid', '{n}.Galaxy');
         return [
             'attribute' => $attributes,
@@ -578,6 +584,84 @@ class EventReport extends AppModel
             'galaxymatrix' => $allowedGalaxies,
             'tagname' => $allTagNames
         ];
+    }
+
+    public function replaceWithTemplateVars($content, $user)
+    {
+        $this->UserSetting = ClassRegistry::init('UserSetting');
+        $templateVariables = $this->UserSetting->getValueForUser($user['id'], 'eventreport_template_variables');
+        $templateVarProxy = Hash::combine($templateVariables, '{n}.name', '{n}.value');
+        foreach ($templateVarProxy as $varName => $replacementValue) {
+            $varSyntax = '/{{\s*' . preg_quote($varName, '/') . '\s*}}/';
+            $content = preg_replace($varSyntax, $replacementValue, $content);
+
+        }
+        return $content;
+    }
+
+    public function replaceMISPElementByTheirValue($content, $event_id, $user)
+    {
+        $proxyMISPElements = $this->getProxyMISPElements($user, $event_id);
+        $replaceContent = '';
+        $authorizedMISPElements = ['attribute', 'object', 'tag'];
+        $reMISPElement = '/@\[(?<scope>' . implode('|', $authorizedMISPElements) . ')\]\((?<elementid>[^\)]+)\)/';
+        $offset = 0;
+
+        if (preg_match_all($reMISPElement, $content, $matches, PREG_OFFSET_CAPTURE)) {
+            foreach ($matches[0] as $index => $match) {
+                $scope = $matches['scope'][$index][0];
+                $elementId = $matches['elementid'][$index][0];
+                $matchPosition = $matches[0][$index][1];
+
+                $element = isset($proxyMISPElements[$scope][$elementId]) ? $proxyMISPElements[$scope][$elementId] : null;
+                if ($element !== null) {
+                    if ($scope == 'attribute') {
+                        $replacement = $scope . '[type:' . $element['type'] . '][value:' . $element['value'] . ']';
+                    } elseif ($scope == 'object') {
+                        $replacement = $scope . '[name:' . $element['name'] . '][value:' . $element['Attribute'][0]['value'] . ']';
+                    } elseif ($scope == 'tag') {
+                        $replacement = $scope . '[' . $element['Tag']['name'] . ']';
+                    }
+                } else {
+                    $replacement = $scope . '-' . $elementId;
+                }
+
+                $replaceContent .= substr($content, $offset, $matchPosition - $offset) . $replacement;
+                $offset = $matchPosition + strlen($match[0]);
+            }
+        }
+
+        $replaceContent .= substr($content, $offset);
+        return $replaceContent;
+    }
+
+    public function convertToPDF($content)
+    {
+        $moduleName = 'convert_markdown_to_pdf';
+        $mispModule = ClassRegistry::init('Module');
+        $postData = [
+            'module' => $moduleName,
+            'text' => JsonTool::encode([
+                'markdown' => $content,
+            ])
+        ];
+
+        $module = $mispModule->getEnabledModule($moduleName, 'expansion');
+        if (isset($module['meta']['config'])) {
+            foreach ($module['meta']['config'] as $conf) {
+                $postData['config'][$conf] = Configure::read('Plugin.Enrichment_' . $moduleName . '_' . $conf);
+            }
+        }
+
+        $result = $mispModule->queryModuleServer($postData, false, 'Enrichment', false, [], true);
+        if (!empty($result['error'])) {
+            throw new BadRequestException('Error Processing Request: ' . $result['error']);
+        } else if (empty($result)) {
+            throw new BadRequestException('Error Processing Request: Error while querying misp-module `convert_markdown_to_pdf` module.');
+        }
+        $converted = $result['results'][0]['values'][0]; // The pdf file is base64 encoded
+        $pdfFile = base64_decode($converted);
+        return $pdfFile;
     }
 
     private function saveAndReturnErrors($data, $saveOptions = [], $errors = [])
@@ -1021,8 +1105,15 @@ class EventReport extends AppModel
         return $report;
     }
 
-    public function sendToLLM($report, $user, &$errors)
+    public function sendToLLM($report, $user, &$errors, $options = [])
     {
+        $defaultOptions = [
+            'insert_executive_summary' => true,
+            'tag_event_with_threat_actor' => true,
+            'tag_event_with_threat_actor_country' => true,
+            'tag_event_with_threat_actor_motivation' => true,
+        ];
+        $options = array_merge($defaultOptions, $options);
         $syncTool = new SyncTool();
         $config = [];
         $HttpSocket = $syncTool->setupHttpSocket($config, $this->timeout);
@@ -1067,28 +1158,35 @@ class EventReport extends AppModel
 	'AI_CouldWeBeAffected' => true
 );
 */
-        
-        if (!empty($data['AI_ExecutiveSummary'])) {
-            $report['EventReport']['content'] = '# Executive Summary' . PHP_EOL . $data['AI_ExecutiveSummary'] . PHP_EOL . PHP_EOL . '# Report' . PHP_EOL . $report['EventReport']['content'];
+        if ($options['insert_executive_summary']) {
+            if (!empty($data['AI_ExecutiveSummary'])) {
+                $report['EventReport']['content'] = '# Executive Summary' . PHP_EOL . $data['AI_ExecutiveSummary'] . PHP_EOL . PHP_EOL . '# Report' . PHP_EOL . $report['EventReport']['content'];
+            }
+            $this->save($report);
         }
-        $this->save($report);
         $event = $this->Event->find('first', [
             'conditions' => ['Event.id' => $report['EventReport']['event_id']],
             'recursive' => -1
         ]);
-        if (!empty($data['AI_ThreatActor'])) {
-            $tag_id = $this->Event->EventTag->Tag->captureTag(['name' => 'misp-galaxy:threat-actor="' . $data['AI_ThreatActor'] . '"'], $user);
-            $this->Event->EventTag->attachTagToEvent($event['Event']['id'], ['id' => $tag_id]);
+        if ($options['tag_event_with_threat_actor']) {
+            if (!empty($data['AI_ThreatActor'])) {
+                $tag_id = $this->Event->EventTag->Tag->captureTag(['name' => 'misp-galaxy:threat-actor="' . $data['AI_ThreatActor'] . '"'], $user);
+                $this->Event->EventTag->attachTagToEvent($event['Event']['id'], ['id' => $tag_id]);
+            }
         }
 
-        if (!empty($data['AI_AttributedCountry'])) {
-            $tag_id = $this->Event->EventTag->Tag->captureTag(['name' => 'misp-galaxy:threat-actor-country="' . $data['AI_AttributedCountry'] . '"'], $user);
-            $this->Event->EventTag->attachTagToEvent($event['Event']['id'], ['id' => $tag_id]);
+        if ($options['tag_event_with_threat_actor_country']) {
+            if (!empty($data['AI_AttributedCountry'])) {
+                $tag_id = $this->Event->EventTag->Tag->captureTag(['name' => 'misp-galaxy:threat-actor-country="' . $data['AI_AttributedCountry'] . '"'], $user);
+                $this->Event->EventTag->attachTagToEvent($event['Event']['id'], ['id' => $tag_id]);
+            }
         }
 
-        if (!empty($data['AI_Motivation'])) {
-            $tag_id = $this->Event->EventTag->Tag->captureTag(['name' => 'misp-galaxy:threat-actor-motivation="' . $data['AI_Motivation'] . '"'], $user);
-            $this->Event->EventTag->attachTagToEvent($event['Event']['id'], ['id' => $tag_id]);
+        if ($options['tag_event_with_threat_actor_motivation']) {
+            if (!empty($data['AI_Motivation'])) {
+                $tag_id = $this->Event->EventTag->Tag->captureTag(['name' => 'misp-galaxy:threat-actor-motivation="' . $data['AI_Motivation'] . '"'], $user);
+                $this->Event->EventTag->attachTagToEvent($event['Event']['id'], ['id' => $tag_id]);
+            }
         }
         return $report;
     }

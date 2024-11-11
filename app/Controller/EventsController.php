@@ -1667,7 +1667,6 @@ class EventsController extends AppController
             $exists = $this->Event->fetchSimpleEvent($this->Auth->user(), $id, ['fields' => ['id']]);
             return new CakeResponse(['status' => $exists ? 200 : 404]);
         }
-
         if (is_numeric($id)) {
             $conditions = array('eventid' => $id);
         } else if (Validation::uuid($id)) {
@@ -5058,7 +5057,7 @@ class EventsController extends AppController
             $galaxy_id = $mitreAttackGalaxyId;
         }
 
-        $matrixData = $this->Galaxy->getMatrix($galaxy_id); // throws exception if matrix not found
+        $matrixData = $this->Galaxy->getMatrix($this->Auth->user(), $galaxy_id); // throws exception if matrix not found
 
         $local = !empty($this->params['named']['local']);
         $this->set('local', $local);
@@ -5176,7 +5175,9 @@ class EventsController extends AppController
         App::uses('ColourGradientTool', 'Tools');
         $gradientTool = new ColourGradientTool();
         $colours = $gradientTool->createGradientFromValues($scores);
+        $this->set('galaxy_id', $galaxy_id);
         $this->set('eventId', $eventId);
+        $this->set('extended', $extended);
         $this->set('target_type', $scope);
         $this->set('columnOrders', $killChainOrders);
         $this->set('tabs', $tabs);
@@ -5189,9 +5190,11 @@ class EventsController extends AppController
         $this->set('pickingMode', !$disable_picking);
         $this->set('target_id', $scope_id);
         if ($matrixData['galaxy']['id'] == $mitreAttackGalaxyId) {
-            $this->set('defaultTabName', 'mitre-attack');
+            $this->set('defaultTabName', 'attack-enterprise');
             $this->set('removeTrailling', 2);
         }
+        $matrixGalaxies = $this->Galaxy->getAllowedMatrixGalaxies($this->Auth->user());
+        $this->set('matrixGalaxies', $matrixGalaxies);
 
         $this->render('/Elements/view_galaxy_matrix');
     }
@@ -5874,6 +5877,48 @@ class EventsController extends AppController
                 $this->Flash->error($message);
             }
             $this->redirect($this->referer());
+        }
+    }
+
+    public function runWorkflow($id)
+    {
+        $event = $this->Event->fetchSimpleEvent($this->Auth->user(), $id);
+        if (empty($event)) {
+            throw new MethodNotAllowedException(__('Invalid Event'));
+        }
+        if (!$this->__canModifyEvent($event)) {
+            throw new ForbiddenException(__('You do not have permission to do that.'));
+        }
+        if ($this->request->is('Post')) {
+            $workflow_ids = [];
+            foreach ($this->request->data['Event'] as $workflow_id => $enabled) {
+                if ($enabled) {
+                    $workflow_ids[] = $workflow_id;
+                }
+            }
+            $results = $this->Event->runWorkflow($id, $workflow_ids);
+            $succesMessage = __('Successfully ran %s Workflows on Event %s', count($workflow_ids), h($id));
+            $errorMessage = __('Error(s) while running Workflow(s): ') . implode(', ', $results['error_messages']);
+            if ($this->_isRest()) {
+                return $this->RestResponse->saveSuccessResponse('Events', 'runWorkflow', $id, $this->response->type(), $results['success_count'] > 0 ? $succesMessage : $errorMessage);
+            } else {
+                if ($results['success_count'] > 0) {
+                    $this->Flash->success($succesMessage);
+                } else {
+                    $this->Flash->error($errorMessage);
+                }
+                $this->redirect('/events/view/' . $id);
+            }
+        } else {
+            $this->loadModel('Workflow');
+            $workflows = $this->Workflow->fetchAdHocWorkflows(true);
+            $workflows = $this->Workflow->attachTriggerParamsToWorkflow($workflows);
+            $allowedWorkflows = array_filter($workflows, function($workflow) {
+                return $workflow['trigger_scope'] == 'passed_event_ids';
+            });
+            $this->layout = false;
+            $this->set('workflows', $allowedWorkflows);
+            $this->render('ajax/run_workflow');
         }
     }
 

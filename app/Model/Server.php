@@ -5650,6 +5650,34 @@ class Server extends AppModel
                         return $this->loadTagCollections();
                     }
                 ),
+                'default_object_distribution' => array(
+                    'level' => 1,
+                    'description' => __('The default distribution setting for objects, set it to \'event\' if you would like the objects to default to the event distribution level. (0-3 or "event")'),
+                    'value' => 'event',
+                    'test' => 'testForEmpty',
+                    'type' => 'string',
+                    'options' => array(
+                        '0' => __('Your organisation only'),
+                        '1' => __('This community only'),
+                        '2' => __('Connected communities'),
+                        '3' => __('All communities'),
+                        'event' => __('Inherit from event')
+                    ),
+                ),
+                'default_eventreport_distribution' => array(
+                    'level' => 1,
+                    'description' => __('The default distribution setting for event-reports, set it to \'event\' if you would like the event-reports to default to the event distribution level. (0-3 or "event")'),
+                    'value' => 'event',
+                    'test' => 'testForEmpty',
+                    'type' => 'string',
+                    'options' => array(
+                        '0' => __('Your organisation only'),
+                        '1' => __('This community only'),
+                        '2' => __('Connected communities'),
+                        '3' => __('All communities'),
+                        'event' => __('Inherit from event')
+                    ),
+                ),
                 'default_publish_alert' => array(
                     'level' => 0,
                     'description' => __('The default setting for publish alerts when creating users.'),
@@ -6277,6 +6305,14 @@ class Server extends AppModel
                     'level' => self::SETTING_RECOMMENDED,
                     'description' => __('Enable warning list triggers regardless of the IDS flag value.'),
                     'value' => false,
+                    'test' => 'testBool',
+                    'type' => 'boolean',
+                    'null' => true
+                ],
+                'hide_unkown_cluster' => [
+                    'level' => self::SETTING_RECOMMENDED,
+                    'description' => __('This will hide unknown cluster to all users expect those having the sync permission.'),
+                    'value' => true,
                     'test' => 'testBool',
                     'type' => 'boolean',
                     'null' => true

@@ -2139,6 +2139,7 @@ class Event extends AppModel
             }
             $this->__attachTags($event, $justExportableTags);
             $this->__attachGalaxies($event, $user, $options['excludeGalaxy'], $options['fetchFullClusters'], $options['fetchFullClusterRelationship']);
+            $this->__pruneUnknownClusters($event, $user);
             $event = $this->Orgc->attachOrgs($event, $fieldsOrg);
             if (!$sharingGroupReferenceOnly && $event['Event']['sharing_group_id']) {
                 if (isset($sharingGroupData[$event['Event']['sharing_group_id']])) {
@@ -2402,6 +2403,20 @@ class Event extends AppModel
                         }
                     }
                     $attribute['Galaxy'] = array_values($attribute['Galaxy']);
+                }
+            }
+        }
+    }
+
+    private function __pruneUnknownClusters(array &$event, array $user)
+    {
+        if (!Configure::read('MISP.hide_unkown_cluster', true) || $user['Role']['perm_sync']) {
+            return;
+        }
+        foreach ($event['EventTag'] as $i => $eventTag) {
+            if ($eventTag['Tag']['is_galaxy']) {
+                if (preg_match($this->EventTag->Tag::RE_CUSTOM_GALAXY, $eventTag['Tag']['name'])) {
+                    unset($event['EventTag'][$i]);
                 }
             }
         }
@@ -2823,11 +2838,6 @@ class Event extends AppModel
             if (empty($options['scope'])) {
                 $scope = 'Attribute';
             } else {
-                if ($options['scope'] === 'Object') {
-                    $conditional_for_filter = [
-                        'Attribute.object_id' => 0
-                    ];
-                }
                 $scope = $options['scope'];
             }
             $deleted = $this->convert_filters($params['deleted']);
@@ -6743,7 +6753,16 @@ class Event extends AppModel
                         $id
                     );
                     if (!empty($original_uuid)) {
-                        $recovered_uuids[$attribute['uuid']] = $original_uuid;
+                        $recovered_uuids[$attribute['uuid']] = $original_uuid['uuid'];
+                        if (!empty($attribute['Tag'])) {
+                            foreach ($attribute['Tag'] as $tag) {
+                                $tag_id = $this->Attribute->AttributeTag->Tag->captureTag($tag, $user);
+                                if ($tag_id) {
+                                    $relationship_type = empty($tag['relationship_type']) ? false : $tag['relationship_type'];
+                                    $this->Attribute->AttributeTag->attachTagToAttribute($original_uuid['id'], $id, $tag_id, !empty($tag['local']), $relationship_type);
+                                }
+                            }
+                        }
                     } else {
                         $failed[] = $attribute['uuid'];
                     }
@@ -7052,11 +7071,11 @@ class Event extends AppModel
                     'Attribute.value' => $attribute_value
                 ),
                 'recursive' => -1,
-                'fields' => array('Attribute.uuid')
+                'fields' => array('Attribute.uuid', 'Attribute.id')
             )
         );
         if (!empty($original_uuid)) {
-            return $original_uuid['Attribute']['uuid'];
+            return $original_uuid['Attribute'];
         }
         $original_uuid = $this->Object->find(
             'first',
@@ -8136,6 +8155,32 @@ class Event extends AppModel
                 }
             }
         }
+    }
+
+    public function runWorkflow($event_id, $workflow_ids)
+    {
+        $this->Workflow = ClassRegistry::init('Workflow');
+        $payload = [
+            'eventid' => [$event_id],
+        ];
+        $all_results = [
+            'success_count' => 0,
+            'error_count' => 0,
+            'error_messages' => [],
+        ];
+        foreach ($workflow_ids as $workflow_id) {
+            if (!$this->Workflow->isAdHocWorkflow($workflow_id)) {
+                throw new MethodNotAllowedException("Can only run a Ad-Hoc Workflow");
+            }
+            $result = $this->Workflow->executeWorkflow($workflow_id, $payload);
+            if (!empty($result['success'])) {
+                $all_results['success_count'] += 1;
+            } else {
+                $all_results['error_count'] += 1;
+                $all_results['error_messages'][] = $result['message'];
+            }
+        }
+        return $all_results;
     }
 
     public function getTrendsForTags(array $user, array $eventFilters=[], int $baseDayRange, int $rollingWindows=3, $tagFilterPrefixes=null): array
