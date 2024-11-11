@@ -31,10 +31,15 @@ class AnalystDataParentBehavior extends ModelBehavior
             $temp = $this->{$type}->fetchForUuid($object['uuid'], $this->__currentUser);
             if (!empty($temp)) {
                 foreach ($temp as $k => $temp_element) {
-                    if (in_array($type, ['Note', 'Opinion', 'Relationship'])) {
-                        $temp_element[$type] = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], 1);
-                    }
                     $data[$type][] = $temp_element[$type];
+                    $childNotesAndOpinions = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type]);
+                    if (!empty($childNotesAndOpinions)) {
+                        foreach ($childNotesAndOpinions as $item) {
+                            foreach ($item as $childType => $childElement) {
+                                $data[$childType][] = $childElement;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -93,8 +98,17 @@ class AnalystDataParentBehavior extends ModelBehavior
                 if (!empty($temp)) {
                     foreach ($chunked_objects as $k => $object) {
                         if (!empty($temp[$object['uuid']])) {
-                            $objects[$chunk][$k][$type] = !empty($objects[$chunk][$k][$type]) ? $objects[$chunk][$k][$type] : [];
-                            $objects[$chunk][$k][$type] = array_merge($objects[$chunk][$k][$type], $temp[$object['uuid']][$type]);
+                            foreach ($temp[$object['uuid']][$type] as $analystData) {
+                                $objects[$chunk][$k][$type][] = $analystData;
+                                $childNotesAndOpinions = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $analystData);
+                                if (!empty($childNotesAndOpinions)) {
+                                    foreach ($childNotesAndOpinions as $item) {
+                                        foreach ($item as $childType => $childElement) {
+                                            $objects[$chunk][$k][$childType][] = $childElement;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
