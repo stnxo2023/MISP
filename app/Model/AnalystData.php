@@ -369,13 +369,12 @@ class AnalystData extends AppModel
         ]);
     }
 
-    public function fetchChildNotesAndOpinions(array $user, array $analystData, $depth = 2): array
+    public function fetchChildNotesAndOpinions(array $user, array $analystData, $isRest = false, $depth = 2): array
     {
-        $childNotesAndOpinions = [];
         if ($depth == 0 || !empty($this->fetchedUUIDFromRecursion[$analystData['uuid']])) {
             $hasMoreNotesOrOpinions =  $this->hasMoreNotesOrOpinions($analystData, $user);
             $analystData['_max_depth_reached'] = $hasMoreNotesOrOpinions;
-            return $childNotesAndOpinions;
+            return $isRest ? [] : $analystData;
         }
         $this->fetchedUUIDFromRecursion[$analystData['uuid']] = true;
         $this->Note = ClassRegistry::init('Note');
@@ -403,32 +402,60 @@ class AnalystData extends AppModel
                 'object_uuid' => $analystData['uuid'],
             ]
         ];
-        $childNotes = $this->Note->find('all', $paramsNote);
-        $childOpinions = $this->Opinion->find('all', $paramsOpinion);
+
+        if ($isRest) {
+            // fetch notes and opinions as lists
+            $childNotesAndOpinions = [];
+            $childNotes = $this->Note->find('all', $paramsNote);
+            $childOpinions = $this->Opinion->find('all', $paramsOpinion);
+
+            if (!empty($childNotes)) {
+                foreach ($childNotes as $childNote) {
+                    $childNotesAndOpinions[] = $childNote;
+                    $expandedNotesAndOpinions = $this->fetchChildNotesAndOpinions($user, $childNote['Note'], $isRest, $depth-1);
+                    if (!empty($expandedNotesAndOpinions)) {
+                        foreach ($expandedNotesAndOpinions as $expandedNoteOrOpinion) {
+                            $childNotesAndOpinions[] = $expandedNoteOrOpinion;
+                        }
+                    }
+                }
+            }
+            if (!empty($childOpinions)) {
+                foreach ($childOpinions as $childOpinion) {
+                    $childNotesAndOpinions[] = $childOpinion;
+                    $expandedNotesAndOpinions = $this->fetchChildNotesAndOpinions($user, $childOpinion['Opinion'], $isRest, $depth-1);
+                    if (!empty($expandedNotesAndOpinions)) {
+                        foreach ($expandedNotesAndOpinions as $expandedNoteOrOpinion) {
+                            $childNotesAndOpinions[] = $expandedNoteOrOpinion;
+                        }
+                    }
+                }
+            }
+            return $childNotesAndOpinions;
+        }
+        // recursively fetch and include nested notes and opinions
+        $childNotes = array_map(function ($item) use ($user, $isRest, $depth) {
+            $expandedNotes = $this->fetchChildNotesAndOpinions($user, $item['Note'], $isRest, $depth-1);
+            return $expandedNotes;
+        }, $this->Note->find('all', $paramsNote));
+        $childOpinions = array_map(function ($item) use ($user, $isRest, $depth) {
+            $expandedNotes = $this->fetchChildNotesAndOpinions($user, $item['Opinion'], $isRest, $depth-1);
+            return $expandedNotes;
+        }, $this->Opinion->find('all', $paramsOpinion));
 
         if (!empty($childNotes)) {
             foreach ($childNotes as $childNote) {
-                $childNotesAndOpinions[] = $childNote;
-                $expandedNotesAndOpinions = $this->fetchChildNotesAndOpinions($user, $childNote['Note'], $depth-1);
-                if (!empty($expandedNotesAndOpinions)) {
-                    foreach ($expandedNotesAndOpinions as $expandedNoteOrOpinion) {
-                        $childNotesAndOpinions[] = $expandedNoteOrOpinion;
-                    }
-                }
+                $this->fetchedUUIDFromRecursion[$childNote['uuid']] = true;
             }
+            $analystData['Note'] = $childNotes;
         }
         if (!empty($childOpinions)) {
             foreach ($childOpinions as $childOpinion) {
-                $childNotesAndOpinions[] = $childOpinion;
-                $expandedNotesAndOpinions = $this->fetchChildNotesAndOpinions($user, $childOpinion['Opinion'], $depth-1);
-                if (!empty($expandedNotesAndOpinions)) {
-                    foreach ($expandedNotesAndOpinions as $expandedNoteOrOpinion) {
-                        $childNotesAndOpinions[] = $expandedNoteOrOpinion;
-                    }
-                }
+                $this->fetchedUUIDFromRecursion[$childOpinion['uuid']] = true;
             }
+            $analystData['Opinion'] = $childOpinions;
         }
-        return $childNotesAndOpinions;
+        return $analystData;
     }
 
     protected function hasMoreNotesOrOpinions($analystData, array $user): bool
@@ -487,7 +514,7 @@ class AnalystData extends AppModel
         $analystData = $analystData[$this->alias];
         $this->Note = ClassRegistry::init('Note');
         $this->Opinion = ClassRegistry::init('Opinion');
-        $analystData = $this->fetchChildNotesAndOpinions($user, $analystData, $depth);
+        $analystData = $this->fetchChildNotesAndOpinions($user, $analystData, false, $depth);
         return $analystData;
     }
 

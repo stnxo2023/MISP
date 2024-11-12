@@ -11,7 +11,7 @@ class AnalystDataParentBehavior extends ModelBehavior
 
 
 
-    public function attachAnalystData(Model $model, array $object, array $types = ['Note', 'Opinion', 'Relationship'])
+    public function attachAnalystData(Model $model, array $object, $isRest = false, array $types = ['Note', 'Opinion', 'Relationship'])
     {
         // No uuid, nothing to attach
         if (empty($object['uuid'])) {
@@ -24,15 +24,27 @@ class AnalystDataParentBehavior extends ModelBehavior
                 $this->__currentUser = $this->User->getAuthUser($user_id);
             }
         }
+
+        $method = 'attach' . ($isRest ? 'Flat' : 'Nested') . 'AnalystData';
+        $fetchRecursive = !empty($model->includeAnalystDataRecursive);
+        $data = $this->$method($object, $types, $fetchRecursive);
+
+        // include inbound relationship
+        $data['RelationshipInbound'] = Hash::extract($this->Relationship->getInboundRelationships($this->__currentUser, $model->alias, $object['uuid']), '{n}.Relationship');
+        return $data;
+    }
+
+    private function attachFlatAnalystData(array $object, array $types, $fetchRecursive): array
+    {
         $data = [];
         foreach ($types as $type) {
             $this->{$type} = ClassRegistry::init($type);
-            $this->{$type}->fetchRecursive = !empty($model->includeAnalystDataRecursive);
+            $this->{$type}->fetchRecursive = $fetchRecursive;
             $temp = $this->{$type}->fetchForUuid($object['uuid'], $this->__currentUser);
             if (!empty($temp)) {
                 foreach ($temp as $k => $temp_element) {
                     $data[$type][] = $temp_element[$type];
-                    $childNotesAndOpinions = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type]);
+                    $childNotesAndOpinions = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], true);
                     if (!empty($childNotesAndOpinions)) {
                         foreach ($childNotesAndOpinions as $item) {
                             foreach ($item as $childType => $childElement) {
@@ -43,9 +55,25 @@ class AnalystDataParentBehavior extends ModelBehavior
                 }
             }
         }
+        return $data;
+    }
 
-        // include inbound relationship
-        $data['RelationshipInbound'] = Hash::extract($this->Relationship->getInboundRelationships($this->__currentUser, $model->alias, $object['uuid']), '{n}.Relationship');
+    private function attachNestedAnalystData(array $object, array $types, $fetchRecursive): array
+    {
+        $data = [];
+        foreach ($types as $type) {
+            $this->{$type} = ClassRegistry::init($type);
+            $this->{$type}->fetchRecursive = !empty($model->includeAnalystDataRecursive);
+            $temp = $this->{$type}->fetchForUuid($object['uuid'], $this->__currentUser);
+            if (!empty($temp)) {
+                foreach ($temp as $k => $temp_element) {
+                    if (in_array($type, ['Note', 'Opinion', 'Relationship'])) {
+                        $temp_element[$type] = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], false, 1);
+                    }
+                    $data[$type][] = $temp_element[$type];
+                }
+            }
+        }
         return $data;
     }
 
