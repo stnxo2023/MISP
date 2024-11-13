@@ -6,12 +6,13 @@
 class AnalystDataParentBehavior extends ModelBehavior
 {
     private $__currentUser = null;
+    private $__isRest = null;
 
     public $User;
 
 
 
-    public function attachAnalystData(Model $model, array $object, $isRest = false, array $types = ['Note', 'Opinion', 'Relationship'])
+    public function attachAnalystData(Model $model, array $object, array $types = ['Note', 'Opinion', 'Relationship'])
     {
         // No uuid, nothing to attach
         if (empty($object['uuid'])) {
@@ -24,8 +25,11 @@ class AnalystDataParentBehavior extends ModelBehavior
                 $this->__currentUser = $this->User->getAuthUser($user_id);
             }
         }
+        if (empty($this->__isRest)) {
+            $this->__isRest = Configure::read('CurrentRequestIsRest');
+        }
 
-        $method = 'attach' . ($isRest ? 'Flat' : 'Nested') . 'AnalystData';
+        $method = 'attach' . ($this->__isRest ? 'Flat' : 'Nested') . 'AnalystData';
         $fetchRecursive = !empty($model->includeAnalystDataRecursive);
         $data = $this->$method($object, $types, $fetchRecursive);
 
@@ -44,7 +48,7 @@ class AnalystDataParentBehavior extends ModelBehavior
             if (!empty($temp)) {
                 foreach ($temp as $k => $temp_element) {
                     $data[$type][] = $temp_element[$type];
-                    $childNotesAndOpinions = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], true);
+                    $childNotesAndOpinions = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], $this->__isRest);
                     if (!empty($childNotesAndOpinions)) {
                         foreach ($childNotesAndOpinions as $item) {
                             foreach ($item as $childType => $childElement) {
@@ -68,7 +72,7 @@ class AnalystDataParentBehavior extends ModelBehavior
             if (!empty($temp)) {
                 foreach ($temp as $k => $temp_element) {
                     if (in_array($type, ['Note', 'Opinion', 'Relationship'])) {
-                        $temp_element[$type] = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], false, 1);
+                        $temp_element[$type] = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], $this->__isRest, 1);
                     }
                     $data[$type][] = $temp_element[$type];
                 }
