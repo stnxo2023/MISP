@@ -2581,7 +2581,7 @@ class Server extends AppModel
             'debug', 'MISP', 'GnuPG', 'SMIME', 'Proxy', 'SecureAuth',
             'Security', 'Session', 'site_admin_debug', 'Plugin', 'CertAuth',
             'ApacheShibbAuth', 'ApacheSecureAuth', 'OidcAuth', 'AadAuth',
-            'SimpleBackgroundJobs', 'LinOTPAuth'
+            'SimpleBackgroundJobs', 'LinOTPAuth', 'LdapAuth'
         );
         $settingsArray = array();
         foreach ($settingsToSave as $setting) {
@@ -5607,7 +5607,7 @@ class Server extends AppModel
                 ],
                 'default_event_distribution' => array(
                     'level' => 0,
-                    'description' => __('The default distribution setting for events (0-3).'),
+                    'description' => __('The default distribution setting for events (0-4).'),
                     'value' => '',
                     'test' => 'testForEmpty',
                     'type' => 'string',
@@ -5615,7 +5615,8 @@ class Server extends AppModel
                         '0' => __('Your organisation only'),
                         '1' => __('This community only'),
                         '2' => __('Connected communities'),
-                        '3' => __('All communities')
+                        '3' => __('All communities'),
+                        '4' => __('Sharing Group'),
                     ],
                 ),
                 'default_attribute_distribution' => array(
@@ -5748,6 +5749,13 @@ class Server extends AppModel
                     'level' => 2,
                     'description' => __('Allows users to take ownership of an event uploaded via the "Add MISP XML" button. This allows spoofing the creator of a manually imported event, also breaking possibly breaking the original intended releasability. Synchronising with an instance that has a different creator for the same event can lead to unwanted consequences.'),
                     'value' => '',
+                    'test' => 'testBool',
+                    'type' => 'boolean',
+                ),
+                'allow_users_override_locked_field_when_importing_events' => array(
+                    'level' => 2,
+                    'description' => __('Allows users to override the state of the `locked` field of an event uploaded via the "Import from MISP Export File" functionality. This allows unlocking manually imported event. Updates to these Events coming from synchronisation might be rejected since it will appear as these Events were originaly created on this instance.'),
+                    'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
                 ),

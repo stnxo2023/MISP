@@ -139,6 +139,7 @@ class Galaxy extends AppModel
             $galaxy['default'] = true;
             $galaxy['org_id'] = 0;
             $galaxy['orgc_id'] = 0;
+            $galaxy['distribution'] = 3;
             if (isset($existingGalaxies[$galaxy['uuid']])) {
                 if (
                     $force ||
@@ -447,7 +448,7 @@ class Galaxy extends AppModel
      * @param  bool  $full
      * @return array The galaxy or an error message
      */
-    public function fetchIfAuthorized(array $user, $galaxy, $authorizations, $throwErrors=true, $full=false)
+    public function fetchIfAuthorized(array $user, $galaxy, $authorizations, $throwErrors=true, $full=false, $rearrangeData=true)
     {
         $authorizations = is_array($authorizations) ? $authorizations : [$authorizations];
         $possibleAuthorizations = ['view', 'edit', 'delete'];
@@ -458,7 +459,7 @@ class Galaxy extends AppModel
             $galaxy[$this->alias] = $galaxy;
         }
         if (!isset($galaxy[$this->alias]['uuid'])) {
-            $galaxy = $this->fetchGalaxyById($user, $galaxy, $throwErrors, $full);
+            $galaxy = $this->fetchGalaxyById($user, $galaxy, $throwErrors, $full, $rearrangeData);
             if (empty($galaxy)) {
                 $message = __('Invalid galaxy');
                 if ($throwErrors) {
@@ -512,7 +513,7 @@ class Galaxy extends AppModel
      * @param bool $full
      * @return array
      */
-    public function fetchGalaxyById(array $user, $id, $throwErrors=true, $full=false)
+    public function fetchGalaxyById(array $user, $id, $throwErrors=true, $full=false, $rearrangeData=true)
     {
         $alias = $this->alias;
         if (Validation::uuid($id)) {
@@ -526,7 +527,7 @@ class Galaxy extends AppModel
             return array();
         }
 
-        return $this->fetchGalaxies($user, ['conditions' => $conditions, 'first' => true], $full=$full);
+        return $this->fetchGalaxies($user, ['conditions' => $conditions, 'first' => true], $full=$full, false, $rearrangeData);
     }
 
     /**
@@ -537,7 +538,7 @@ class Galaxy extends AppModel
      * @param  bool  $full
      * @return array
      */
-    public function fetchGalaxies(array $user, array $options, $full=false, $includeFullClusterRelationship=false)
+    public function fetchGalaxies(array $user, array $options, $full=false, $includeFullClusterRelationship=false, $rearrangeData=true)
     {
         $params = [
             'conditions' => $this->buildConditions($user),
@@ -597,16 +598,21 @@ class Galaxy extends AppModel
 
         if ($full) {
             foreach ($galaxies as $i => $galaxy) {
-                $galaxies[$i]['GalaxyCluster'] = $this->GalaxyCluster->fetchGalaxyClusters($user, [
+                $clusters = $this->GalaxyCluster->fetchGalaxyClusters($user, [
                     'conditions' => [
                         'galaxy_id' => $galaxy['Galaxy']['id'],
                     ],
                 ], true);
+                $galaxies[$i]['GalaxyCluster'] = array_map(function($cluster) {
+                    return $cluster['GalaxyCluster'];
+                }, $clusters);
             }
         }
 
-        foreach ($galaxies as $i => $galaxy) {
-            $galaxies[$i] = $this->arrangeData($galaxies[$i]);
+        if (!empty($rearrangeData)) {
+            foreach ($galaxies as $i => $galaxy) {
+                $galaxies[$i] = $this->arrangeData($galaxies[$i]);
+            }
         }
         if (isset($options['first']) && $options['first']) {
             return $galaxies[0];
@@ -1014,6 +1020,56 @@ class Galaxy extends AppModel
             'conditions' => $conditions,
         ));
         return $galaxies;
+    }
+
+    public function getUnknownClustersDetails(): array
+    {
+        $allGalaxyTags = $this->GalaxyCluster->Tag->find('list', [
+            'recursive' => -1,
+            'conditions' => [
+                'is_galaxy' => true,
+            ],
+            'fields' => ['name'],
+        ]);
+        $allCreatedClusterTags = $this->GalaxyCluster->find('list', [
+            'recursive' => -1,
+            'conditions' => [],
+            'fields' => ['tag_name'],
+            'joins' => [
+                [
+                    'table' => 'tags',
+                    'alias' => 'Tag',
+                    'type' => 'INNER',
+                    'conditions' => [
+                        'Tag.name = GalaxyCluster.tag_name',
+                    ],
+                ]
+            ]
+        ]);
+        $flippedCreatedClusterTags = array_flip($allCreatedClusterTags);
+        $count = [
+            'unknownCustomClusters' => 0,
+            'unknownCustomClustersSamples' => [],
+            'unknownDefaultClusters' => 0,
+            'unknownDefaultClustersSamples' => [],
+        ];
+        foreach ($allGalaxyTags as $tagName) {
+            if (empty($flippedCreatedClusterTags[$tagName])) {
+                if (!preg_match($this->GalaxyCluster->Tag::RE_CUSTOM_CLUSTER_FROM_DEFAULT_GALAXY, $tagName)) {
+                    $count['unknownCustomClusters'] += 1;
+                    if (count($count['unknownCustomClustersSamples']) < 5) {
+                        $count['unknownCustomClustersSamples'][] = $tagName;
+                    }
+                } else {
+                    $count['unknownDefaultClusters'] += 1;
+                    if (count($count['unknownDefaultClustersSamples']) < 5) {
+                        $count['unknownDefaultClustersSamples'][] = $tagName;
+                    }
+                }
+            }
+        }
+        $count['unknownClusters'] = $count['unknownCustomClusters'] + $count['unknownDefaultClusters'];
+        return $count;
     }
 
     public function getMatrix($user, $galaxy_id, $scores=[])

@@ -152,6 +152,7 @@ class Event extends AppModel
         'blockedAttributeTags',
         'eventsExtendingUuid',
         'extended',
+        'extending',
         'extensionList',
         'excludeGalaxy',
         // 'includeCustomGalaxyCluster', // not used
@@ -1625,7 +1626,7 @@ class Event extends AppModel
             $find_params['fields'] = array('Event.id', 'Event.attribute_count');
             $results = $this->find('list', $find_params);
         } else {
-            $find_params['fields'] = array('Event.id');   
+            $find_params['fields'] = array('Event.id');
             $results = $this->find('column', $find_params);
         }
         if (!isset($params['limit'])) {
@@ -2302,6 +2303,11 @@ class Event extends AppModel
                 $results[$k] = $this->__mergeExtensions($user, $result, $options);
             }
         }
+        if ($options['extending']) {
+            foreach ($results as $k => $result) {
+                $results[$k] = $this->__mergeExtensions($user, $result, $options);
+            }
+        }
         if ($options['extensionList']) {
             foreach ($results as $k => $result) {
                 $results[$k] = $this->__fetchEventsExtendingEvent($user, $result, $options);
@@ -2538,16 +2544,21 @@ class Event extends AppModel
      */
     private function __mergeExtensions(array $user, array $event, array $options)
     {
-        $extensions = $this->fetchEvent($user, [
-            'eventsExtendingUuid' => $event['Event']['uuid'],
+        $fetchOptions = [
             'includeEventCorrelations' => $options['includeEventCorrelations'],
             'includeWarninglistHits' => $options['includeWarninglistHits'],
             'noShadowAttributes' => $options['noShadowAttributes'],
-            'noEventReports' => $options['noEventReports'],
+            'noEventReports' => !$options['noEventReports'],
             'noSightings' => isset($options['noSightings']) ? $options['noSightings'] : null,
             'sgReferenceOnly' => $options['sgReferenceOnly'],
             'includeAnalystData' => $options['includeAnalystData'],
-        ]);
+        ];
+        if (!empty($options['extending'])) {
+            $fetchOptions['event_uuid'] = $event['Event']['extends_uuid'];
+        } else {
+            $fetchOptions['eventsExtendingUuid'] = $event['Event']['uuid'];
+        }
+        $extensions = $this->fetchEvent($user, $fetchOptions);
         foreach ($extensions as $extensionEvent) {
             $eventMeta = array(
                 'id' => $extensionEvent['Event']['id'],
@@ -2561,7 +2572,7 @@ class Event extends AppModel
                 ),
             );
             $event['Event']['extensionEvents'][$eventMeta['id']] = $eventMeta;
-            $thingsToMerge = array('Attribute', 'Object', 'ShadowAttribute', 'Galaxy');
+            $thingsToMerge = array('Attribute', 'Object', 'ShadowAttribute', 'Galaxy', 'EventReport');
             foreach ($thingsToMerge as $thingToMerge) {
                 if (!isset($event[$thingToMerge])) {
                     $event[$thingToMerge] = [];
@@ -3640,7 +3651,7 @@ class Event extends AppModel
      * @return array[]
      * @throws Exception
      */
-    public function addMISPExportFile(array $user, $data, $isXml = false, $takeOwnership = false, $publish = false)
+    public function addMISPExportFile(array $user, $data, $isXml = false, $takeOwnership = false, $publish = false, $allowLockOverride = false)
     {
         if (empty($data)) {
             throw new Exception("File is empty");
@@ -3682,7 +3693,13 @@ class Event extends AppModel
             }
             $event = array('Event' => $event);
             $created_id = 0;
-            $event['Event']['locked'] = 1;
+            if (!empty($allowLockOverride) && !empty(Configure::read('MISP.allow_users_override_locked_field_when_importing_events'))) {
+                if (!isset($event['Event']['locked'])) {
+                    $event['Event']['locked'] = 1;
+                }
+            } else {
+                $event['Event']['locked'] = 1;
+            }
             $event['Event']['published'] = $publish;
             $event = $this->updatedLockedFieldForAllAnalystData($event);
             $result = $this->_add($event, true, $user, '', null, false, null, $created_id, $validationIssues);
@@ -3700,24 +3717,24 @@ class Event extends AppModel
     {
         $event = $this->updatedLockedFieldForAnalystData($event, 'Event');
         if (!empty($event['Event']['Attribute'])) {
-            for ($i=0; $i < count($event['Event']['Attribute']); $i++) { 
+            for ($i=0; $i < count($event['Event']['Attribute']); $i++) {
                 $event['Event']['Attribute'][$i] = $this->updatedLockedFieldForAnalystData($event['Event']['Attribute'][$i]);
             }
         }
         if (!empty($event['Event']['Object'])) {
-            for ($i=0; $i < count($event['Event']['Object']); $i++) { 
+            for ($i=0; $i < count($event['Event']['Object']); $i++) {
                  if (isset($event['Event']['Object'][$i])) {
                     $event['Event']['Object'][$i] = $this->updatedLockedFieldForAnalystData($event['Event']['Object'][$i]);
                 }
                 if (!empty($event['Event']['Object'][$i])) {
-                    for ($j=0; $j < count($event['Event']['Object'][$i]['Attribute']); $j++) { 
+                    for ($j=0; $j < count($event['Event']['Object'][$i]['Attribute']); $j++) {
                         $event['Event']['Object'][$i]['Attribute'][$j] = $this->updatedLockedFieldForAnalystData($event['Event']['Object'][$i]['Attribute'][$j]);
                     }
                 }
             }
         }
         if (!empty($event['Event']['EventReport'])) {
-            for ($i=0; $i < count($event['Event']['EventReport']); $i++) { 
+            for ($i=0; $i < count($event['Event']['EventReport']); $i++) {
                 $event['Event']['EventReport'][$i] = $this->updatedLockedFieldForAnalystData($event['Event']['EventReport'][$i]);
             }
         }
@@ -3732,7 +3749,7 @@ class Event extends AppModel
         }
         foreach ($this->AnalystData::ANALYST_DATA_TYPES as $type) {
             if (!empty($data[$type])) {
-                for ($i=0; $i < count($data[$type]); $i++) { 
+                for ($i=0; $i < count($data[$type]); $i++) {
                     $data[$type][$i]['locked'] = true;
                     foreach ($this->AnalystData::ANALYST_DATA_TYPES as $childType) {
                         if (!empty($data[$type][$i][$childType])) {
@@ -4227,13 +4244,13 @@ class Event extends AppModel
                         $changed = true;
                     }
                 }
-                $this->Attribute->editAttributeBulk($attributes, $saveResult, $user);
+                $this->Attribute->editAttributeBulk($attributes, $saveResult, $user, $server);
             }
             if (isset($data['Event']['Object'])) {
                 $data['Event']['Object'] = array_values($data['Event']['Object']);
                 foreach ($data['Event']['Object'] as $object) {
                     $nothingToChange = false;
-                    $result = $this->Object->editObject($object, $saveResult, $user, false, $force, $nothingToChange);
+                    $result = $this->Object->editObject($object, $saveResult, $user, false, $force, $nothingToChange, $server);
                     if ($result !== true) {
                         $validationErrors['Object'][] = $result;
                     }
@@ -4753,7 +4770,7 @@ class Event extends AppModel
             'recursive' => -1,
             'conditions' => array('Event.id' => $id)
         ));
-        
+
         if (empty($event)) {
             return false;
         }
@@ -4802,7 +4819,7 @@ class Event extends AppModel
             $success = $this->executeTrigger('event-publish', $fullEvent[0], $workflowErrors, $logging);
             if (empty($success)) {
                 $errorMessage = implode(', ', $workflowErrors);
-                
+
                 return $errorMessage;
             }
         }
@@ -7534,7 +7551,7 @@ class Event extends AppModel
         if (!empty($exportTool->additional_params)) {
             $filters = array_merge($filters, $exportTool->additional_params);
         }
-        
+
         $exportToolParams = array(
             'user' => $user,
             'params' => array(),
@@ -7914,6 +7931,18 @@ class Event extends AppModel
                 'extends_uuid' => $event['Event']['uuid']
             ]]);
             return $extendingEventIds;
+        }
+        return [];
+    }
+
+    public function getExtendedEventIdsFromEvent($user, $eventID)
+    {
+        $childEvent = $this->fetchSimpleEvent($user, $eventID);
+        if (!empty($childEvent)) {
+            $extendedEventIds = $this->fetchSimpleEventIds($user, ['conditions' => [
+                'uuid' => $childEvent['Event']['extends_uuid']
+            ]]);
+            return $extendedEventIds;
         }
         return [];
     }
