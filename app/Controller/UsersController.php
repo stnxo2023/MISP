@@ -1278,8 +1278,10 @@ class UsersController extends AppController
     private function _postlogin()
     {
         $authUser = $this->Auth->user();
-        $this->User->extralog($authUser, "login");
-
+        if (empty($authUser['disabled'])) {
+            $this->User->extralog($authUser, "login");
+        }
+        
         $this->User->Behaviors->disable('SysLogLogable.SysLogLogable');
         $user = $this->User->find('first', array(
             'conditions' => array(
