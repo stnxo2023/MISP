@@ -1291,7 +1291,9 @@ class UsersController extends AppController
             'recursive' => -1
         ));
         // update login timestamp and welcome user
-        $this->User->updateLoginTimes($user['User']);
+        if (empty($authUser['disabled'])) {
+            $this->User->updateLoginTimes($user['User']);
+        }
         $this->User->Behaviors->enable('SysLogLogable.SysLogLogable');
 
         $lastUserLogin = $user['User']['last_login'];
