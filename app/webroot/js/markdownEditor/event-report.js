@@ -1545,8 +1545,8 @@ function sendToLLM() {
 }
 
 function configureTemplateVariable() {
-    var url = baseurl + '/eventReports/configureTemplateVariable'
-    openGenericModal(url)
+    var url = baseurl + '/eventReportTemplateVariables/index'
+    window.open(url)
 }
 
 /**

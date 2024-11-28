@@ -681,39 +681,6 @@ class EventReportsController extends AppController
         }
     }
 
-    public function configureTemplateVariable()
-    {
-        if (!$this->request->is('ajax')) {
-            throw new MethodNotAllowedException(__('This function can only be reached via AJAX.'));
-        }
-        if ($this->request->is('post')) {
-            if (isset($this->request->data['EventReport'])) {
-                $this->request->data = $this->request->data['EventReport'];
-            }
-            $template_variables = $this->request->data['template_variables'];
-            $template_variables = JsonTool::decode($template_variables);
-            $setting = [
-                'UserSetting' => [
-                    'user_id' => $this->Auth->user('id'),
-                    'setting' => 'eventreport_template_variables',
-                    'value' => $template_variables,
-                ]
-            ];
-            $this->loadModel('UserSetting');
-            $success = $this->UserSetting->setSetting($this->Auth->user(), $setting);
-            if (!empty($success)) {
-                $message = __('Template variables saved');
-                return $this->__getSuccessResponseBasedOnContext($message, null, 'configureTemplateVariable');
-            } else {
-                $message = __('Template variables could not be saved');
-                return $this->__getFailResponseBasedOnContext($message, null, 'configureTemplateVariable');
-            }
-        }
-        $this->layout = false;
-        $this->__injectTemplateVariables($this->Auth->user());
-        $this->render('ajax/configureTemplateVariables');
-    }
-
     public function downloadAsPDF($reportId)
     {
         $this->__isDownloadAsPDFModuleAvailable();
@@ -873,10 +840,10 @@ class EventReportsController extends AppController
         $this->set('isDownloadAsPDFModuleAvailable', $isDownloadAsPDFModuleAvailable);
     }
 
-    private function __injectTemplateVariables(array $user)
+    private function __injectTemplateVariables()
     {
-        $templateVariables = $this->User->UserSetting->getValueForUser($user['id'], 'eventreport_template_variables');
-        $templateVariables = is_null($templateVariables) ? [] : $templateVariables;
+        $this->loadModel('EventReportTemplateVariable');
+        $templateVariables = $this->EventReportTemplateVariable->getAll();
         $this->set('templateVariables', $templateVariables);
     }
 

@@ -600,8 +600,8 @@ class EventReport extends AppModel
 
     public function replaceWithTemplateVars($content, $user)
     {
-        $this->UserSetting = ClassRegistry::init('UserSetting');
-        $templateVariables = $this->UserSetting->getValueForUser($user['id'], 'eventreport_template_variables');
+        $this->EventReportTemplateVariable = ClassRegistry::init('EventReportTemplateVariable');
+        $templateVariables = $this->EventReportTemplateVariable->getAll();
         $templateVarProxy = !empty($templateVariables) ? Hash::combine($templateVariables, '{n}.name', '{n}.value') : [];
         foreach ($templateVarProxy as $varName => $replacementValue) {
             $varSyntax = '/{{\s*' . preg_quote($varName, '/') . '\s*}}/';
