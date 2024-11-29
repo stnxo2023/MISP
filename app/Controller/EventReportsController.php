@@ -595,8 +595,13 @@ class EventReportsController extends AppController
             if ($this->request->is('post')) {
                 $this->loadModel('Attribute');
                 $picture = $this->request->data['EventReport']['picture'];
-                $saveAsAttachment = !empty($this->request->data['EventReport']['save_as_attachment']);
                 $saveAsAttachmentConfig = false;
+                if ($this->Auth->user()['Role']['perm_site_admin']) {
+                    $saveAsAttachment = !empty($this->request->data['EventReport']['save_as_attachment']);
+                } else {
+                    $saveAsAttachment = true;
+                    $saveAsAttachmentConfig = [];
+                }
                 if ($saveAsAttachment) {
                     $saveAsAttachmentConfig['comment'] = $this->request->data['EventReport']['comment'] ?? __('Imported via Event Report');
                     $saveAsAttachmentConfig['distribution'] = $this->request->data['EventReport']['distribution'] ?? $this->Attribute->defaultDistribution();
