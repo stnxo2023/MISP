@@ -1471,11 +1471,13 @@ class EventReport extends AppModel
         $aliases = [];
 
         foreach ($files as $filename) {
+            $theAlias = $this->getAliasForImage($filename);
             // check if this file is used in at least one report
             $reportCount = $this->find('count', [
                 'recursive' => -1,
                 'conditions' => [
-                    'content LIKE' => sprintf('%%/eventReports/viewPicture/%s%%', $filename)
+                    'content LIKE' => sprintf('%%/eventReports/viewPicture/%s%%', $filename),
+                    'content LIKE' => sprintf('%%/eventReports/viewPicture/%s%%', $theAlias),
                 ]
             ]);
             if (empty($reportCount)) {
@@ -1483,7 +1485,7 @@ class EventReport extends AppModel
             } else {
                 $fileReferenced[$filename] = $reportCount;
             }
-            $aliases[$filename] = $this->getAliasForImage($filename);
+            $aliases[$filename] = $theAlias;
         }
         return [
             'all_files' => $files,
