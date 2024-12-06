@@ -174,7 +174,7 @@ To configure these settings in your application, ensure each setting is defined 
     'ldapEmailField' => ['mail', 'uid'],
     'ldapNetworkTimeout' => -1,
     'ldapProtocol' => 3,
-    'ldapAllowReferrals' => false,
+    'ldapAllowReferrals' => 0,
     'starttls' => true,
     'mixedAuth' => true,
     'ldapDefaultOrg' => 1,
@@ -237,3 +237,11 @@ Example test (failed) search:
 # ldapsearch -H ldaps://localhost:1636 -x -b "dc=example,dc=com" -D "cn=reader,dc=example,dc=com" -w password -d 1
 TLS: hostname (localhost) does not match common name in certificate (ldap.example.com).
 TLS: can't connect: (unknown error code).
+
+### Known issues
+#### Error: [LdapAuth] LDAP user search failed: Operations error
+```
+Warning (2): ldap_search(): Search: Operations error in [/var/www/MISP/app/Plugin/LdapAuth/Controller/Component/Auth/LdapAuthenticate.php, line ...]
+```
+
+Try setting `"ldapAllowReferrals" => 0`

@@ -144,7 +144,7 @@ class LdapAuthenticate extends BaseAuthenticate
             $filter =  '(&' . self::$conf['ldapSearchFilter'] . $filter . ')';
         }
 
-        $ldapUser = ldap_search($ldapconn, self::$conf['ldapDn'], $filter, ['mail']);
+        $ldapUser = ldap_search($ldapconn, self::$conf['ldapDn'], $filter, self::$conf['ldapEmailField']);
 
         if (!$ldapUser) {
             CakeLog::error("[LdapAuth] LDAP user search failed: " . ldap_error($ldapconn));
