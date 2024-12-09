@@ -7294,7 +7294,7 @@ msgid "If enabled, HTTP headers that block browser cache will be send. Static fi
 msgstr "หากเปิดใช้งาน ระบบจะส่งส่วนหัว HTTP ที่ block browser cache. ไฟล์สแตติก (เช่น รูปภาพหรือ JavaScript) จะยังคงถูกแคชไว้ แต่ไม่ใช่เพจที่สร้างขึ้น"
 
 #: Model/Server.php:5959
-msgid "If enabled, any POST, PUT or AJAX request will be allow just when Sec-Fetch-Site header is not defined or contains \"same-origin\"."
+msgid "If enabled, any POST, PUT or AJAX request will only be allowed when Sec-Fetch-Site header is not defined or contains \"same-origin\"."
 msgstr "หากเปิดใช้งาน คำขอ POST, PUT หรือ AJAX จะได้รับอนุญาตเมื่อไม่ได้กำหนดส่วนหัวของ Sec-Fetch-Site หรือมี \"same-origin\""
 
 #: Model/Server.php:5967
