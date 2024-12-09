@@ -6747,7 +6747,7 @@ class Server extends AppModel
                 ),
                 'check_sec_fetch_site_header' => [
                     'level' => 0,
-                    'description' => __('If enabled, any POST, PUT or AJAX request will be allow just when Sec-Fetch-Site header is not defined or contains "same-origin".'),
+                    'description' => __('If enabled, any POST, PUT or AJAX request will only be allowed when Sec-Fetch-Site header is not defined or contains "same-origin".'),
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',

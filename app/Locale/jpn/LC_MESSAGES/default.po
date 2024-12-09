@@ -7290,7 +7290,7 @@ msgid "If enabled, HTTP headers that block browser cache will be send. Static fi
 msgstr ""
 
 #: Model/Server.php:5959
-msgid "If enabled, any POST, PUT or AJAX request will be allow just when Sec-Fetch-Site header is not defined or contains \"same-origin\"."
+msgid "If enabled, any POST, PUT or AJAX request will only be allowed when Sec-Fetch-Site header is not defined or contains \"same-origin\"."
 msgstr ""
 
 #: Model/Server.php:5967
