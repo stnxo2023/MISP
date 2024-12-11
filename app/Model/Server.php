@@ -2151,7 +2151,7 @@ class Server extends AppModel
 
     public function testForCustomImage($value)
     {
-        return $this->__testForFile($value, APP . 'webroot' . DS . 'img' . DS . 'custom');
+        return $this->__testForFile($value, APP . 'files' . DS . 'img' . DS . 'custom');
     }
 
     public function testPasswordLength($value)
