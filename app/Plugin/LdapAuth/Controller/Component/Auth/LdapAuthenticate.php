@@ -179,6 +179,12 @@ class LdapAuthenticate extends BaseAuthenticate
 
         $ldapconn = $this->ldapConnect();
 
+        $ldapbind = ldap_bind($ldapconn, self::$conf['ldapReaderUser'],  self::$conf['ldapReaderPassword']);
+        if (!$ldapbind) {
+            CakeLog::error("[LdapAuth] Invalid LDAP reader user credentials: " . ldap_error($ldapconn));
+            throw new UnauthorizedException(__('User could not be authenticated by LDAP.'));
+        }
+
         $ldapUserData = $this->getLdapUserData($ldapconn, $email);
 
         if ($ldapUserData['count'] == 0) {
