@@ -5201,7 +5201,6 @@ class EventsController extends AppController
         $this->set('galaxy_id', $galaxy_id);
         $this->set('eventId', $eventId);
         $this->set('extended', $extended);
-        $this->set('extending', $extending);
         $this->set('target_type', $scope);
         $this->set('columnOrders', $killChainOrders);
         $this->set('tabs', $tabs);
