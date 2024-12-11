@@ -1,6 +1,6 @@
 <?php
 
-include '/var/www/MISP/app/Config/config.php';
+include __DIR__ . '../../../../../../Config/config.php';
 
 function printColored($text, $color = "default")
 {
@@ -16,7 +16,6 @@ function printColored($text, $color = "default")
     ];
     echo $colors[$color] . $text . $colors["default"] . "\n";
 }
-
 
 printColored("################################################", "yellow");
 printColored("##           LdapAuth test script             ##", "yellow");
