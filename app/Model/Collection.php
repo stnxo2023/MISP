@@ -36,7 +36,16 @@ class Collection extends AppModel
                 'User.id',
                 'User.email'
             ]
-        )
+        ),
+        'SharingGroup' => [
+            'className' => 'SharingGroup',
+            'foreignKey' => 'sharing_group_id',
+            'fields' => [
+                'SharingGroup.id',
+                'SharingGroup.uuid',
+                'SharingGroup.name'
+            ]
+        ]
     ];
 
     public $hasMany = [
@@ -131,6 +140,32 @@ class Collection extends AppModel
             }
         }
         return false;
+    }
+
+    public function buildConditions($user_id)
+    {
+        $user = $this->User->getAuthUser($user_id);
+        $SharingGroup = ClassRegistry::init('SharingGroup');
+        $sgids = $SharingGroup->authorizedIds($user);
+        $conditions = [];
+        if (!$user['Role']['perm_site_admin']) {
+            $conditions['OR'] = [
+                [
+                    'Collection.orgc_id' => $user['org_id'],
+                    'Collection.org_id' => $user['org_id']
+                ],
+                [
+                    'Collection.distribution IN' => [1,2,3]
+                ],
+                [
+                    'AND' => [
+                        'Collection.distribution' => 4,
+                        'Collection.sharing_group_id' => $sgids
+                    ]
+                ]
+            ];
+        }
+        return $conditions;
     }
 
     public function rearrangeCollection(array $collection) {

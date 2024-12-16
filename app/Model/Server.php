@@ -521,6 +521,7 @@ class Server extends AppModel
                 if ($existingEvent['Event']['protected']) {
                     if (!$eventModel->CryptographicKey->validateProtectedEvent($response->body, $user, $response->getHeader('x-pgp-signature'), $existingEvent)) {
                         $fails[$eventId] = __('Event failed the validation checks. The remote instance claims that the event can be signed with a valid key which is sus.');
+                        return false;
                     }
                 }
                 $result = $eventModel->_edit($event, $user, $existingEvent['Event']['id'], $jobId, $passAlong, $force);
@@ -5569,6 +5570,7 @@ class Server extends AppModel
                     'value' => 'https://cve.circl.lu/cve/',
                     'test' => 'testForEmpty',
                     'type' => 'string',
+                    'cli_only' => 1
                 ),
                 'cweurl' => array(
                     'level' => 1,
@@ -5576,6 +5578,7 @@ class Server extends AppModel
                     'value' => 'https://cve.circl.lu/cwe/',
                     'test' => 'testForEmpty',
                     'type' => 'string',
+                    'cli_only' => 1
                 ),
                 'disablerestalert' => array(
                     'level' => 1,
@@ -6447,7 +6450,8 @@ class Server extends AppModel
                     'value' => '/usr/bin/gpg',
                     'test' => 'testForGPGBinary',
                     'type' => 'string',
-                    'cli_only' => 1
+                    'cli_only' => 1,
+                    'null' => true
                 ),
                 'onlyencrypted' => array(
                     'level' => 0,
@@ -6498,6 +6502,7 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
+                    'null' => true
                 ),
                 'key_fetching_disabled' => [
                     'level' => self::SETTING_OPTIONAL,
@@ -6505,6 +6510,15 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
+                    'null' => true
+                ],
+                'restrict_server_signing_to_host_org' => [
+                    'level' => self::SETTING_RECOMMENDED,
+                    'description' => __('Restrict server signing via /encryptionKeys/serverSign to host org only users, even for users that otherwise meet role requirements. This setting defaults to false. Site admins are exempt from this requirement, even when the setting is enabled.'),
+                    'value' => false,
+                    'test' => 'testBool',
+                    'type' => 'boolean',
+                    'null' => true
                 ],
             ),
             'SMIME' => array(
@@ -6554,6 +6568,7 @@ class Server extends AppModel
                     'value' => '',
                     'test' => 'testForEmpty',
                     'type' => 'string',
+                    'cli_only' => 1
                 ),
                 'port' => array(
                     'level' => 2,
@@ -6561,6 +6576,7 @@ class Server extends AppModel
                     'value' => '',
                     'test' => 'testForNumeric',
                     'type' => 'numeric',
+                    'cli_only' => 1
                 ),
                 'method' => array(
                     'level' => 2,
@@ -6568,6 +6584,7 @@ class Server extends AppModel
                     'value' => '',
                     'test' => 'testForEmpty',
                     'type' => 'string',
+                    'cli_only' => 1
                 ),
                 'user' => array(
                     'level' => 2,
@@ -6575,6 +6592,7 @@ class Server extends AppModel
                     'value' => '',
                     'test' => 'testForEmpty',
                     'type' => 'string',
+                    'cli_only' => 1
                 ),
                 'password' => array(
                     'level' => 2,
@@ -6582,7 +6600,8 @@ class Server extends AppModel
                     'value' => '',
                     'test' => 'testForEmpty',
                     'type' => 'string',
-                    'redacted' => true
+                    'redacted' => true,
+                    'cli_only' => 1
                 ),
             ),
             'Security' => array(
