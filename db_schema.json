@@ -10980,9 +10980,5 @@
             "uuid": false
         }
     },
-<<<<<<< HEAD
-    "db_version": "132"
-=======
     "db_version": "134"
->>>>>>> fa3a82696 (chg: [db schema] updated)
 }
