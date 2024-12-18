@@ -700,6 +700,10 @@ class Server extends AppModel
 
             $pulledSightings = $eventModel->Sighting->pullSightings($user, $serverSync);
 
+            if ($jobId) {
+                $job->saveProgress($jobId, 'Pulling analyst data.', 87);
+            }
+
             $this->AnalystData = ClassRegistry::init('AnalystData');
             $pulledAnalystData = $this->AnalystData->pull($user, $serverSync);
         }
