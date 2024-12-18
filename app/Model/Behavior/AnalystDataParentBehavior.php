@@ -132,7 +132,7 @@ class AnalystDataParentBehavior extends ModelBehavior
                         if (!empty($temp[$object['uuid']])) {
                             foreach ($temp[$object['uuid']][$type] as $analystData) {
                                 $objects[$chunk][$k][$type][] = $analystData;
-                                $childNotesAndOpinions = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $analystData);
+                                $childNotesAndOpinions = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $analystData, $this->__isRest, 1);
                                 if (!empty($childNotesAndOpinions)) {
                                     foreach ($childNotesAndOpinions as $item) {
                                         foreach ($item as $childType => $childElement) {
