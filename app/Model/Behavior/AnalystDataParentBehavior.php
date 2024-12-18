@@ -72,7 +72,7 @@ class AnalystDataParentBehavior extends ModelBehavior
             if (!empty($temp)) {
                 foreach ($temp as $k => $temp_element) {
                     if (in_array($type, ['Note', 'Opinion', 'Relationship'])) {
-                        $temp_element[$type] = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], $this->__isRest, 1);
+                        $temp_element[$type] = $this->{$type}->fetchChildNotesAndOpinions($this->__currentUser, $temp_element[$type], $this->__isRest, 5);
                     }
                     $data[$type][] = $temp_element[$type];
                 }
