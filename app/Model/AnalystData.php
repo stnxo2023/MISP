@@ -370,7 +370,7 @@ class AnalystData extends AppModel
         ]);
     }
 
-    public function fetchChildNotesAndOpinions(array $user, array $analystData, $isRest = false, $depth = 2): array
+    public function fetchChildNotesAndOpinions(array $user, array $analystData, $isRest = true, $depth = 2): array
     {
         if ($depth == 0 || !empty($this->fetchedUUIDFromRecursion[$analystData['uuid']])) {
             $hasMoreNotesOrOpinions =  $this->hasMoreNotesOrOpinions($analystData, $user);
