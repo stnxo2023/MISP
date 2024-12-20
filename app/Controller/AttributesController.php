@@ -2624,8 +2624,14 @@ class AttributesController extends AppController
                                     return new CakeResponse(array('body'=> json_encode(array('saved' => false, 'errors' => 'Invalid Tag Collection.')), 'status'=>200, 'type' => 'json'));
                                 }
                                 $tag_id_list = array_column($tagCollection[0]['TagCollectionTag'], 'tag_id');
-                            } else {
+                            } else if(is_numeric($tag_id)){
                                 $tag_id_list[] = $tag_id;
+                            } else {
+                                $tagId = $this->Attribute->AttributeTag->Tag->lookupTagIdForUser($this->Auth->user(), trim($tag_id));
+                                if (empty($tagId)) {
+                                    return new CakeResponse(array('body'=> json_encode(array('saved' => false, 'errors' => 'Invalid Tag.')), 'status'=>200, 'type' => 'json'));
+                                }
+                                $tag_id_list[] = $tagId;
                             }
                         }
                     } else {
