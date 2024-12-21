@@ -162,7 +162,7 @@ class EventReport extends AppModel
                 'conditions' => ['id' => $this->id],
             ]);
             if ($savedReport) {
-                $this->Event->captureAnalystData($user, $report, 'EventReport', $savedReport['EventReport']['uuid']);
+                $this->Event->captureAnalystData($user, $report['EventReport'], 'EventReport', $savedReport['EventReport']['uuid']);
             }
         }
         return $errors;
