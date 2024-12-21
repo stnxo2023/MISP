@@ -2151,7 +2151,7 @@ class Server extends AppModel
 
     public function testForCustomImage($value)
     {
-        return $this->__testForFile($value, APP . 'webroot' . DS . 'img' . DS . 'custom');
+        return $this->__testForFile($value, APP . 'files' . DS . 'img' . DS . 'custom');
     }
 
     public function testPasswordLength($value)
@@ -6614,15 +6614,6 @@ class Server extends AppModel
             ),
             'Security' => array(
                 'branch' => 1,
-                'disable_form_security' => array(
-                    'level' => 0,
-                    'description' => __('Disabling this setting will remove all form tampering protection. Do not set this setting pretty much ever. You were warned.'),
-                    'value' => false,
-                    'errorMessage' => 'This setting leaves your users open to CSRF attacks. Please consider disabling this setting.',
-                    'test' => 'testBoolFalse',
-                    'type' => 'boolean',
-                    'null' => true
-                ),
                 'csp_enforce' => [
                     'level' => self::SETTING_CRITICAL,
                     'description' => __('Enforce CSP. Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross Site Scripting (XSS) and data injection attacks. When disabled, violations will be just logged.'),
