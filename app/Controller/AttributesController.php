@@ -2623,7 +2623,7 @@ class AttributesController extends AppController
                                 if (empty($tagCollection)) {
                                     return new CakeResponse(array('body'=> json_encode(array('saved' => false, 'errors' => 'Invalid Tag Collection.')), 'status'=>200, 'type' => 'json'));
                                 }
-                                $tag_id_list = array_column($tagCollection[0]['TagCollectionTag'], 'tag_id');
+                                $tag_id_list = array_merge($tag_id_list, array_column($tagCollection[0]['TagCollectionTag'], 'tag_id'));
                             } else if(is_numeric($tag_id)){
                                 $tag_id_list[] = $tag_id;
                             } else {
