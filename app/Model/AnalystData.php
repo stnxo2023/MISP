@@ -515,7 +515,7 @@ class AnalystData extends AppModel
         $analystData = $analystData[$this->alias];
         $this->Note = ClassRegistry::init('Note');
         $this->Opinion = ClassRegistry::init('Opinion');
-        $analystData = $this->fetchChildNotesAndOpinions($user, $analystData, $this->__isRest, $depth);
+        $analystData = $this->fetchChildNotesAndOpinions($user, $analystData, isset($this->__isRest) ? $this->__isRest : false, $depth);
         return $analystData;
     }
 
