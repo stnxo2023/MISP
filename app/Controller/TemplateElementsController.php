@@ -50,6 +50,7 @@ class TemplateElementsController extends AppController
 
     public function templateElementAddChoices($id)
     {
+        $id = intval($id);
         if (!$this->_isSiteAdmin() && !$this->TemplateElement->Template->checkAuthorisation($id, $this->Auth->user(), true)) {
             throw new MethodNotAllowedException('You are not authorised to do that.');
         }
