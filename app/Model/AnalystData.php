@@ -433,9 +433,9 @@ class AnalystData extends AppModel
             if (!empty($childOpinions)) {
                 foreach ($childOpinions as $childOpinion) {
                     foreach ($orgTypes as $orgType) {
-                        $childNote['Note'][$orgType] = array_filter($childNote['Note'][$orgType], function ($key) use ($orgFields) {
+                        $childNote['Opinion'][$orgType] = array_filter($childNote['Opinion'][$orgType], function ($key) use ($orgFields) {
                             return in_array($key, $orgFields);
-                        }, ARRAY_FILTER_USE_KEY);    
+                        }, ARRAY_FILTER_USE_KEY);
                     }
                     $childNotesAndOpinions[] = $childOpinion;
                     $expandedNotesAndOpinions = $this->fetchChildNotesAndOpinions($user, $childOpinion['Opinion'], $isRest, $depth-1);
