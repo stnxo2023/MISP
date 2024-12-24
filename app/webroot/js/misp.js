@@ -946,6 +946,14 @@ function toggleAllCheckboxes() {
     }
 }
 
+function toggleAllObjectAttributeCheckboxes(object_id){
+    if ($(".select_all_object_attributes_" + object_id).is(":checked")) {
+        $('.Object_' + object_id + '_collapsible_attr input.select_attribute').prop("checked", true);
+    } else {
+        $('.Object_' + object_id + '_collapsible_attr input.select_attribute').prop("checked", false);
+    }
+}
+
 function toggleAllTaxonomyCheckboxes() {
     if ($(".select_all").is(":checked")) {
         $(".select_taxonomy").prop("checked", true);
