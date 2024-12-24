@@ -6697,7 +6697,7 @@ class Server extends AppModel
                 ],
                 'rest_client_enable_arbitrary_urls' => array(
                     'level' => 0,
-                    'description' => __('Enable this setting if you wish for users to be able to query any arbitrary URL via the rest client. Keep in mind that queries are executed by the MISP server, so internal IPs in your MISP\'s network may be reachable.'),
+                    'description' => __('Enable this setting if you wish for users to be able to query any arbitrary URL via the rest client. Keep in mind that queries are executed by the MISP server, so internal IPs in your MISP\'s network may be reachable, so in most cases enabling this is not advised.'),
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
@@ -6709,7 +6709,8 @@ class Server extends AppModel
                     'description' => __('If left empty, the baseurl of your MISP is used. However, in some instances (such as port-forwarded VM installations) this will not work. You can override the baseurl with a url through which your MISP can reach itself (typically https://127.0.0.1 would work).'),
                     'value' => false,
                     'test' => null,
-                    'type' => 'string'
+                    'type' => 'string',
+                    'cli_only' => 1
                 ),
                 'syslog' => array(
                     'level' => 0,

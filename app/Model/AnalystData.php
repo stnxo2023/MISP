@@ -91,7 +91,7 @@ class AnalystData extends AppModel
                 'Orgc' => [
                     'className' => 'Organisation',
                     'fields' => [
-                        'id', 'name', 'uuid','type', 'sector', 'nationality', 'local'
+                        'id', 'name', 'uuid','type', 'description', 'sector', 'nationality', 'local'
                     ],
                     'foreignKey' => false,
                     'conditions' => [
@@ -409,9 +409,17 @@ class AnalystData extends AppModel
             $childNotesAndOpinions = [];
             $childNotes = $this->Note->find('all', $paramsNote);
             $childOpinions = $this->Opinion->find('all', $paramsOpinion);
-
+            $orgFields = ['id', 'uuid', 'name', 'type', 'description', 'sector', 'national', 'local'];
+            $orgTypes = ['Org', 'Orgc'];
             if (!empty($childNotes)) {
                 foreach ($childNotes as $childNote) {
+                    foreach ($orgTypes as $orgType) {
+                        if (!empty($childOpinion['Note'][$orgType])) {
+                            $childNote['Note'][$orgType] = array_filter($childNote['Note'][$orgType], function ($key) use ($orgFields) {
+                                return in_array($key, $orgFields);
+                            }, ARRAY_FILTER_USE_KEY);    
+                        }
+                    }
                     $childNotesAndOpinions[] = $childNote;
                     $expandedNotesAndOpinions = $this->fetchChildNotesAndOpinions($user, $childNote['Note'], $isRest, $depth-1);
                     if (!empty($expandedNotesAndOpinions)) {
@@ -423,6 +431,13 @@ class AnalystData extends AppModel
             }
             if (!empty($childOpinions)) {
                 foreach ($childOpinions as $childOpinion) {
+                    foreach ($orgTypes as $orgType) {
+                        if (!empty($childOpinion['Opinion'][$orgType])) {
+                            $childOpinion['Opinion'][$orgType] = array_filter($childOpinion['Opinion'][$orgType], function ($key) use ($orgFields) {
+                                return in_array($key, $orgFields);
+                            }, ARRAY_FILTER_USE_KEY);
+                        }
+                    }
                     $childNotesAndOpinions[] = $childOpinion;
                     $expandedNotesAndOpinions = $this->fetchChildNotesAndOpinions($user, $childOpinion['Opinion'], $isRest, $depth-1);
                     if (!empty($expandedNotesAndOpinions)) {
