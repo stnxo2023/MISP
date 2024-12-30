@@ -6986,7 +6986,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'username_in_response_header' => [
                     'level' => self::SETTING_OPTIONAL,
