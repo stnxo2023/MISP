@@ -79,7 +79,7 @@ class SysLogLogableBehavior extends LogableBehavior
 				}
 				// TODO Audit, removed 'revision' as well
 				if ($key != 'lastpushedid' && $key!= 'timestamp' && $key != 'revision' && $key != 'modified' && !in_array($key, $this->settings[$Model->alias]['ignore']) && $value != $old && in_array($key, $db_fields)) {
-                    if ($key === 'authkey' && Configure::read('Security.do_not_log_authkeys')) {
+                    if ($key === 'api_key' || $key === 'headers' || $key === 'authkey' && Configure::read('Security.do_not_log_authkeys')) {
                         $old = $value = '*****';
                     }
 

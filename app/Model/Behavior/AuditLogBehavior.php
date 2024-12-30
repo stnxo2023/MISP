@@ -31,7 +31,7 @@ class AuditLogBehavior extends ModelBehavior
         'proposal_email_lock' => true, // Event
         'enable_password' => true,
         'confirm_password' => true,
-        'totp' => true
+        'totp' => true,
     ];
 
     private $modelInfo = [
@@ -377,7 +377,7 @@ class AuditLogBehavior extends ModelBehavior
                 continue;
             }
 
-            if ($key === 'password' || $key === 'authkey' || ($key === 'value' && $model->name === 'SystemSetting' && SystemSetting::isSensitive($model->data[$model->alias]['setting']))) {
+            if ($key === 'password' || $key === 'authkey' || $key === 'headers' || $key === 'api_key' || ($key === 'value' && $model->name === 'SystemSetting' && SystemSetting::isSensitive($model->data[$model->alias]['setting']))) {
                 $value = '*****';
                 if ($old !== null) {
                     $old = $value;

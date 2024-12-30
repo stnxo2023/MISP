@@ -167,6 +167,27 @@ class Log extends AppModel
      */
     private $syslog;
 
+    public function beforeValidate($options = [])
+    {
+        if (empty($this->data['Log']['change'])) {
+            if (is_array($this->data['Log']['change'])) {
+                $output = [];
+                foreach ($this->data['Log']['change'] as $field => $values) {
+                    $isSecret = str_contains($field, 'password') || $field === 'api_key' || $field === 'headers' || ($field === 'authkey' && Configure::read('Security.do_not_log_authkeys'));
+                    if ($isSecret) {
+                        $oldValue = $newValue = "*****";
+                    } else {
+                        list($oldValue, $newValue) = $values;
+                    }
+                    $output[] = "$field ($oldValue) => ($newValue)";
+                }
+                $this->data['Log']['change'] = implode(", ", $output);
+            }
+    
+        }
+        return true;
+    }
+
     public function beforeSave($options = array())
     {
         if (!empty(Configure::read('MISP.log_skip_db_logs_completely'))) {
@@ -280,7 +301,7 @@ class Log extends AppModel
         if (is_array($change)) {
             $output = [];
             foreach ($change as $field => $values) {
-                $isSecret = str_contains($field, 'password') || ($field === 'authkey' && Configure::read('Security.do_not_log_authkeys'));
+                $isSecret = str_contains($field, 'password') || $field === 'api_key' || $field === 'headers' || ($field === 'authkey' && Configure::read('Security.do_not_log_authkeys'));
                 if ($isSecret) {
                     $oldValue = $newValue = "*****";
                 } else {
