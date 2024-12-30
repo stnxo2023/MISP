@@ -234,7 +234,7 @@ class AuditLog extends AppModel
         }
 
         if (isset($auditLog['change'])) {
-            $sanitiseFields = ['password', 'api_key', 'authkey', 'headers'];
+            $sanitiseFields = ['password', 'api_key', 'authkey', 'headers', 'api_token', 'token', 'key'];
             foreach ($sanitiseFields as $field) {
                 if (isset($auditLog['change'][$field])) {
                     $auditLog['change'][$field] = '***';

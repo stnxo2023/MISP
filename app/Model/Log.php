@@ -173,7 +173,8 @@ class Log extends AppModel
             if (is_array($this->data['Log']['change'])) {
                 $output = [];
                 foreach ($this->data['Log']['change'] as $field => $values) {
-                    $isSecret = str_contains($field, 'password') || $field === 'api_key' || $field === 'headers' || ($field === 'authkey' && Configure::read('Security.do_not_log_authkeys'));
+                    $sanitiseFields = ['password', 'api_key', 'authkey', 'headers', 'api_token', 'token', 'key'];
+                    $isSecret = in_array($field, $sanitiseFields) || ($field === 'authkey' && Configure::read('Security.do_not_log_authkeys'));
                     if ($isSecret) {
                         $oldValue = $newValue = "*****";
                     } else {
