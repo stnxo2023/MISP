@@ -455,7 +455,7 @@ class ACLComponent extends Component
         ),
         'logs' => array(
             'admin_index' => array('perm_audit'),
-            'admin_search' => array('perm_audit'),
+            'search' => array('perm_audit'),
             'event_index' => array('*'),
             'returnDates' => array('*'),
             'testForStolenAttributes' => array(),

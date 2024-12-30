@@ -104,6 +104,37 @@ class Log extends AppModel
         )
     );
 
+    public $searchModelList = [
+        'Attribute',
+        'Allowedlist',
+        'AuthKey',
+        'Event',
+        'EventBlocklist',
+        'EventTag',
+        'Feed',
+        'DecayingModel',
+        'EventGraph',
+        'EventReport',
+        'MispObject',
+        'Organisation',
+        'Post',
+        'Regexp',
+        'Role',
+        'Server',
+        'ShadowAttribute',
+        'SharingGroup',
+        'Tag',
+        'Task',
+        'Taxonomy',
+        'Template',
+        'Thread',
+        'User',
+        'Galaxy',
+        'GalaxyCluster',
+        'GalaxyClusterRelation',
+        'Workflow',
+    ];
+
     public $actionDefinitions = array(
         'login' => array('desc' => 'Login action', 'formdesc' => "Login action"),
         'logout' => array('desc' => 'Logout action', 'formdesc' => "Logout action"),

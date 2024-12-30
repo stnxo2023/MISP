@@ -5932,3 +5932,13 @@ function filterSearch(callback) {
         });
     });
 }
+
+function submitLogSearch() {
+    var url = baseurl + '/logs/index';
+    $('.log-search-field').each(function() {
+        if ($(this).val() !== '') {
+            url += '/' + encodeURIComponent($(this).data('field')) + ':' + encodeURIComponent($(this).val().replace("/", ""));
+        }
+    });
+    $(location).prop('href', url);
+}
