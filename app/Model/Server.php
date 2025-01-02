@@ -700,6 +700,10 @@ class Server extends AppModel
 
             $pulledSightings = $eventModel->Sighting->pullSightings($user, $serverSync);
 
+            if ($jobId) {
+                $job->saveProgress($jobId, 'Pulling analyst data.', 87);
+            }
+
             $this->AnalystData = ClassRegistry::init('AnalystData');
             $pulledAnalystData = $this->AnalystData->pull($user, $serverSync);
         }
@@ -2151,7 +2155,7 @@ class Server extends AppModel
 
     public function testForCustomImage($value)
     {
-        return $this->__testForFile($value, APP . 'webroot' . DS . 'img' . DS . 'custom');
+        return $this->__testForFile($value, APP . 'files' . DS . 'img' . DS . 'custom');
     }
 
     public function testPasswordLength($value)
@@ -5877,7 +5881,8 @@ class Server extends AppModel
                     'errorMessage' => __('Logging has now been disabled - your audit logs will not capture failed authentication attempts, your event history logs are not being populated and no system maintenance messages are being logged.'),
                     'test' => 'testBoolFalse',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'log_skip_access_logs_in_application_logs' => [
                     'level' => 0,
@@ -5894,7 +5899,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBoolFalse',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'log_paranoid_api' => array(
                     'level' => 0,
@@ -5902,7 +5908,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBoolFalse',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'log_paranoid_skip_db' => array(
                     'level' => 0,
@@ -5918,7 +5925,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'log_paranoid_include_sql_queries' => [
                     'level' => 0,
@@ -5926,7 +5934,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ],
                 'log_user_ips' => array(
                     'level' => 0,
@@ -6440,6 +6449,14 @@ class Server extends AppModel
                     'test' => 'testBool',
                     'type' => 'boolean',
                     'null' => true,
+                ],
+                'disable_baseurl_coercion' => [
+                    'level' => self::SETTING_OPTIONAL,
+                    'description' => __('Disable the automatic coercion of the baseurl for the framework. This is generally recommended against as it solves some potential redirect issues, but has been reported to help when running MISP in a subdirectory.'),
+                    'value' => false,
+                    'test' => 'testBool',
+                    'type' => 'boolean',
+                    'null' => true,
                 ]
             ),
             'GnuPG' => array(
@@ -6606,15 +6623,6 @@ class Server extends AppModel
             ),
             'Security' => array(
                 'branch' => 1,
-                'disable_form_security' => array(
-                    'level' => 0,
-                    'description' => __('Disabling this setting will remove all form tampering protection. Do not set this setting pretty much ever. You were warned.'),
-                    'value' => false,
-                    'errorMessage' => 'This setting leaves your users open to CSRF attacks. Please consider disabling this setting.',
-                    'test' => 'testBoolFalse',
-                    'type' => 'boolean',
-                    'null' => true
-                ),
                 'csp_enforce' => [
                     'level' => self::SETTING_CRITICAL,
                     'description' => __('Enforce CSP. Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross Site Scripting (XSS) and data injection attacks. When disabled, violations will be just logged.'),
@@ -6694,7 +6702,7 @@ class Server extends AppModel
                 ],
                 'rest_client_enable_arbitrary_urls' => array(
                     'level' => 0,
-                    'description' => __('Enable this setting if you wish for users to be able to query any arbitrary URL via the rest client. Keep in mind that queries are executed by the MISP server, so internal IPs in your MISP\'s network may be reachable.'),
+                    'description' => __('Enable this setting if you wish for users to be able to query any arbitrary URL via the rest client. Keep in mind that queries are executed by the MISP server, so internal IPs in your MISP\'s network may be reachable, so in most cases enabling this is not advised.'),
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
@@ -6706,7 +6714,8 @@ class Server extends AppModel
                     'description' => __('If left empty, the baseurl of your MISP is used. However, in some instances (such as port-forwarded VM installations) this will not work. You can override the baseurl with a url through which your MISP can reach itself (typically https://127.0.0.1 would work).'),
                     'value' => false,
                     'test' => null,
-                    'type' => 'string'
+                    'type' => 'string',
+                    'cli_only' => 1
                 ),
                 'syslog' => array(
                     'level' => 0,
@@ -6738,7 +6747,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'mandate_ip_allowlist_advanced_authkeys' => array(
                     'level' => 2,
@@ -6943,7 +6953,8 @@ class Server extends AppModel
                     'errorMessage' => __('You have enabled the logging of API keys in clear text. This is highly recommended against, do you really want to reveal APIkeys in your logs?...'),
                     'test' => 'testBoolFalse',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'allow_cors' => array(
                     'level' => 1,
@@ -6975,7 +6986,8 @@ class Server extends AppModel
                     'value' => false,
                     'test' => 'testBool',
                     'type' => 'boolean',
-                    'null' => true
+                    'null' => true,
+                    'cli_only' => 1
                 ),
                 'username_in_response_header' => [
                     'level' => self::SETTING_OPTIONAL,

@@ -1051,6 +1051,9 @@ class UsersController extends AppController
                     $this->User->extralog($this->Auth->user(), "edit", "user", $fieldsResult, $user);
                     if ($this->_isRest()) {
                         $user['User']['password'] = '******';
+                        if (!empty($user['User']['totp'])) {
+                            $user['User']['totp'] = '******';
+                        }
                         if (!empty(Configure::read('Security.advanced_authkeys'))) {
                             unset($user['User']['authkey']);
                         }
@@ -2098,6 +2101,19 @@ class UsersController extends AppController
         $stats['object_count'] = $this->User->Event->Object->find('count', array('conditions' => array('Object.deleted' => 0), 'recursive' => -1));
         $stats['object_count_month'] = $this->User->Event->Object->find('count', array('conditions' => array('Object.timestamp >' => $this_month, 'Object.deleted' => 0), 'recursive' => -1));
         $stats['objects_per_event'] = $stats['event_count'] != 0 ? round($stats['object_count'] / $stats['event_count']) : 0;
+
+        $this->loadModel('Note');
+        $this->loadModel('Opinion');
+        $this->loadModel('Relationship');
+        $stats['analyst_data_count'] = $this->Note->find('count', array('recursive' => -1)) +
+            $this->Opinion->find('count', array('recursive' => -1)) +
+            $this->Relationship->find('count', array('recursive' => -1));
+        $stats['analyst_data_count_month'] = $this->Note->find('count', array('conditions' => array('Note.modified >' => $this_month), 'recursive' => -1)) + 
+            $this->Opinion->find('count', array('conditions' => array('Opinion.modified >' => $this_month), 'recursive' => -1)) +
+            $this->Relationship->find('count', array('conditions' => array('Relationship.modified >' => $this_month), 'recursive' => -1));
+
+        $stats['eventreport_count'] = $this->User->Event->EventReport->find('count', array('conditions' => array('EventReport.deleted' => 0), 'recursive' => -1));
+        $stats['eventreport_count_month'] = $this->User->Event->EventReport->find('count', array('conditions' => array('EventReport.timestamp >' => $this_month, 'EventReport.deleted' => 0), 'recursive' => -1));
 
         $stats['correlation_count'] = $this->User->Event->Attribute->Correlation->find('count', array('recursive' => -1));
 
