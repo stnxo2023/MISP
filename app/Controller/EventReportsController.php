@@ -483,11 +483,12 @@ class EventReportsController extends AppController
         if (!$this->request->is('ajax') && !$this->_isRest()) {
             throw new MethodNotAllowedException(__('This function can only be reached via AJAX and via the API.'));
         }
+
+        // throws exception if the user can't modify it
+        $this->__canModifyReport($event_id);
+        
         $errors = [];
-        $fetcherModule = $this->EventReport->isFetchURLModuleEnabledAndAllowed($this->Auth->user());
-        if (empty($fetcherModule)) {
-            $errors[] = __('Could not fetch report from URL. Fetcher module not enabled or could not download the page');
-        }
+        $fetcherModules = $this->EventReport->getEnabledFetchURLModules($this->Auth->user());
         if ($this->request->is('post')) {
             if (empty($this->data['EventReport'])) {
                 $this->data = ['EventReport' => $this->data];
@@ -506,7 +507,7 @@ class EventReportsController extends AppController
             }
             $content = null;
             if (empty($errors)) {
-                $content = $this->EventReport->downloadMarkdownFromURL($event_id, $url, $format);
+                $content = $this->EventReport->downloadMarkdownFromURL($this->Auth->user(), $event_id, $url, $format);
                 if (!empty($content)) {
                     $report = [
                         'name' => __('Report from - %s (%s)', $url, time()),
@@ -528,7 +529,7 @@ class EventReportsController extends AppController
                 return $this->__getSuccessResponseBasedOnContext($successMessage, $report, 'addFromURL', false, $redirectTarget);
             }
         }
-        $this->set('importModuleEnabled', is_array($fetcherModule));
+        $this->set('importModuleEnabled', !empty($fetcherModules));
         $this->set('event_id', $event_id);
         $this->layout = false;
         $this->render('ajax/importReportFromUrl');
