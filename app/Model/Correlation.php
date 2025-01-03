@@ -483,7 +483,7 @@ class Correlation extends AppModel
             $conditions2[] = [
                 'AND' => [
                     'Attribute.value2' => $cV,
-                    'NOT' => ['Attribute.type' => MispAttribute::PRIMARY_ONLY_CORRELATING_TYPES]
+                    'NOT' => ['Attribute.type' => Attribute::PRIMARY_ONLY_CORRELATING_TYPES]
                 ]
             ];
 
