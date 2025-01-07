@@ -251,11 +251,11 @@ class ACLComponent extends Component
             'restore' => array('perm_add'),
             'index' => array('*'),
             'getProxyMISPElements' => array('*'),
-            'extractAllFromReport' => array('*'),
-            'extractFromReport' => array('*'),
+            'extractAllFromReport' => array('perm_add'),
+            'extractFromReport' => array('perm_add'),
             'replaceSuggestionInReport' => array('*'),
-            'importReportFromUrl' => array('*'),
-            'sendToLLM' => ['*'],
+            'importReportFromUrl' => array('perm_add'),
+            'sendToLLM' => ['perm_add'],
             'configureTemplateVariable' => ['perm_add'],
             'downloadAsPDF' => ['*'],
             'addTag' => ['perm_tagger'],
@@ -455,7 +455,7 @@ class ACLComponent extends Component
         ),
         'logs' => array(
             'admin_index' => array('perm_audit'),
-            'admin_search' => array('perm_audit'),
+            'search' => array('perm_audit'),
             'event_index' => array('*'),
             'returnDates' => array('*'),
             'testForStolenAttributes' => array(),
@@ -1158,7 +1158,7 @@ class ACLComponent extends Component
     public function canModifyGalaxyCluster(array $user, array $cluster)
     {
         if (!isset($cluster['GalaxyCluster'])) {
-            throw new InvalidArgumentException('Passed object does not contain an GalaxyCluster.');
+            throw new InvalidArgumentException('Passed object does not contain a GalaxyCluster.');
         }
         if ($cluster['GalaxyCluster']['default']) {
             return false; // it is not possible to edit default clusters
@@ -1182,7 +1182,7 @@ class ACLComponent extends Component
     public function canModifyGalaxy(array $user, array $galaxy)
     {
         if (!isset($galaxy['Galaxy'])) {
-            throw new InvalidArgumentException('Passed object does not contain an Galaxy.');
+            throw new InvalidArgumentException('Passed object does not contain a Galaxy.');
         }
         if ($galaxy['Galaxy']['default']) {
             return false; // it is not possible to edit default clusters
