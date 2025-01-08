@@ -6209,17 +6209,17 @@ class Event extends AppModel
                 $scriptFile,
                 '-i', $file,
                 '--distribution', $distribution,
-                '--org_uuid', $orgUuid
+                '--org-uuid', $orgUuid
             ];
             if ($distribution == 4) {
-                array_push($shellCommand, '--sharing_group_id', $sharingGroupId);
+                array_push($shellCommand, '--sharing-group-id', $sharingGroupId);
             }
             if ($galaxiesAsTags) {
-                $shellCommand[] = '--galaxies_as_tags';
+                $shellCommand[] = '--galaxies-as-tags';
             } else {
-                array_push($shellCommand, '--cluster_distribution', $clusterDistribution);
+                array_push($shellCommand, '--cluster-distribution', $clusterDistribution);
                 if ($clusterDistribution == 4) {
-                    array_push($shellCommand, '--cluster_sharing_group_id', $clusterSharingGroupId);
+                    array_push($shellCommand, '--cluster-sharing-group-id', $clusterSharingGroupId);
                 }
             }
             if ($debug) {

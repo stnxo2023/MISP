@@ -121,7 +121,7 @@ if __name__ == '__main__':
         help='Input file containing STIX 2 content.'
     )
     argparser.add_argument(
-        '--org_uuid', default=MISP_org_uuid,
+        '--org-uuid', default=MISP_org_uuid,
         help='Organisation UUID to use when creating custom Galaxy clusters.'
     )
     argparser.add_argument(
@@ -129,7 +129,7 @@ if __name__ == '__main__':
         help='Distribution level for the resulting MISP Event.'
     )
     argparser.add_argument(
-        '--sharing_group_id', type=int,
+        '--sharing-group-id', type=int,
         help='Sharing group id when the distribution level is 4.'
     )
     argparser.add_argument(
@@ -137,15 +137,15 @@ if __name__ == '__main__':
         help='Display error and warning messages.'
     )
     argparser.add_argument(
-        '--galaxies_as_tags', action='store_true',
+        '--galaxies-as-tags', action='store_true',
         help='Import MISP Galaxies as tag names.'
     )
     argparser.add_argument(
-        '--cluster_distribution', type=int, default=0,
+        '--cluster-distribution', type=int, default=0,
         help='Cluster distribution level for clusters generated from STIX 2.x objects'
     )
     argparser.add_argument(
-        '--cluster_sharing_group_id', type=int,
+        '--cluster-sharing-group-id', type=int,
         help='Cluster sharing group id when the cluster distribution level is 4.'
     )
     try:
@@ -153,9 +153,7 @@ if __name__ == '__main__':
     except SystemExit as e:
         print(
             json.dumps(
-                {
-                    'error': 'Arguments error, please check you provided an input file name'
-                }
+                {'error': 'Arguments error, please check you provided an input file name'}
             )
         )
         sys.exit(1)
