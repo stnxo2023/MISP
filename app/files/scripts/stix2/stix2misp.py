@@ -48,6 +48,7 @@ from stix2.parsing import parse as stix2_parser
 def _get_stix_parser(from_misp, args):
     arguments = {
         'distribution': args.distribution,
+        'force_contextual_data': args.force_contextual_data,
         'galaxies_as_tags': args.galaxies_as_tags
     }
     if args.distribution == 4 and args.sharing_group_id is not None:
@@ -137,6 +138,10 @@ if __name__ == '__main__':
     argparser.add_argument(
         '--debug', action='store_true',
         help='Display error and warning messages.'
+    )
+    argparser.add_argument(
+        '--force-contextual-data', action='store_true',
+        help='Convert contextual STIX objects as contextual MISP objects.'
     )
     argparser.add_argument(
         '--galaxies-as-tags', action='store_true',
