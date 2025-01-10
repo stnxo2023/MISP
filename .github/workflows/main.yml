@@ -6,9 +6,9 @@ name: misp
 # events but only for the 2.4 and develop branches
 on:
   push:
-    branches: [ '2.4', develop, misp-stix, taxii ]
+    branches: [ '2.4', develop, '2.4-develop', misp-stix, taxii, 'feature/analystData_flattening' ]
   pull_request:
-    branches: [ '2.4', develop, misp-stix ]
+    branches: [ '2.4', develop, '2.4-develop', misp-stix ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -148,7 +148,8 @@ jobs:
           app/Console/cake Admin setSetting "MISP.python_bin" "$GITHUB_WORKSPACE/venv/bin/python"
           . ./venv/bin/activate
           export PYTHONPATH=$PYTHONPATH:./app/files/scripts
-          pip install ./PyMISP[fileobjects,email] ./app/files/scripts/python-stix ./app/files/scripts/cti-python-stix2 pyzmq redis plyara pytest
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
           deactivate
 
       - name: DB Update

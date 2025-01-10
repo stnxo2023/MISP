@@ -33,8 +33,8 @@ class AppController extends Controller
 
     public $helpers = array('OrgImg', 'FontAwesome', 'UserName');
 
-    private $__queryVersion = '163';
-    public $pyMispVersion = '2.4.195';
+    private $__queryVersion = '169';
+    public $pyMispVersion = '2.5.4';
     public $phpmin = '7.2';
     public $phprec = '7.4';
     public $phptoonew = '8.0';
@@ -113,6 +113,15 @@ class AppController extends Controller
             SystemSetting::setGlobalSetting();
         }
 
+        // Set the baseurl for redirects
+        $baseurl = empty(Configure::read('MISP.baseurl')) ? null : Configure::read('MISP.baseurl');
+
+        if (!empty($baseurl) && empty(Configure::read('MISP.disable_baseurl_coercion'))) {
+            Configure::write('App.fullBaseUrl', $baseurl);
+            Router::fullBaseUrl($baseurl);
+        }
+
+        $this->_setupBaseurl();
         $this->User = ClassRegistry::init('User');
         if (Configure::read('Plugin.Benchmarking_enable')) {
             App::uses('BenchmarkTool', 'Tools');
@@ -124,7 +133,6 @@ class AppController extends Controller
         if ($action === 'heartbeat') {
             return;
         }
-        $this->_setupBaseurl();
         $this->Auth->loginRedirect = $this->baseurl . '/users/routeafterlogin';
 
         $customLogout = Configure::read('Plugin.CustomAuth_custom_logout');
@@ -282,6 +290,12 @@ class AppController extends Controller
                 }
                 $this->response->header('X-Username', $headerValue);
                 $this->RestResponse->setHeader('X-Username', $headerValue);
+            }
+
+            if (Configure::read('Security.user_org_uuid_in_response_header')) {
+                $userOrgHeaderValue = $user['Organisation']['uuid'];
+                $this->response->header('X-UserOrgUUID', $userOrgHeaderValue);
+                $this->RestResponse->setHeader('X-UserOrgUUID', $userOrgHeaderValue);
             }
 
             if (!$this->__verifyUser($user))  {
@@ -763,7 +777,7 @@ class AppController extends Controller
 
         $shouldBeLogged = $userMonitoringEnabled ||
             Configure::read('MISP.log_paranoid') ||
-            (Configure::read('MISP.log_paranoid_api') && isset($user['logged_by_authkey']) && $user['logged_by_authkey']);
+            (Configure::read('MISP.log_paranoid_api') && isset($user['logged_by_authkey']));
 
         if ($shouldBeLogged) {
             $includeRequestBody = !empty(Configure::read('MISP.log_paranoid_include_post_body')) || $userMonitoringEnabled;
@@ -947,7 +961,7 @@ class AppController extends Controller
     {
         // Let us access $baseurl from all views
         $baseurl = Configure::read('MISP.baseurl');
-        if (substr($baseurl, -1) === '/') {
+        if (str_ends_with($baseurl, '/')) {
             // if the baseurl has a trailing slash, remove it. It can lead to issues with the CSRF protection
             $baseurl = rtrim($baseurl, '/');
             $this->loadModel('Server');
@@ -1029,6 +1043,9 @@ class AppController extends Controller
             if (!in_array('limit', $options['paramArray'])) {
                 $options['paramArray'][] = 'limit';
             }
+            if (!in_array('sign', $options['paramArray'])) {
+                $options['paramArray'][] = 'sign';
+            }
         }
         $request = $options['request'] ?? $this->request;
         if ($request->is('post')) {
@@ -1052,7 +1069,7 @@ class AppController extends Controller
                     $data = array_merge($data, $temp);
                 } else {
                     foreach ($options['paramArray'] as $param) {
-                        if (substr($param, -1) == '*') {
+                        if (str_ends_with($param, '*')) {
                             $root = substr($param, 0, strlen($param)-1);
                             foreach ($temp as $existingParamKey => $v) {
                                 $leftover = substr($existingParamKey, strlen($param)-1);
@@ -1114,7 +1131,7 @@ class AppController extends Controller
             foreach ($data as $k => $v) {
                 $found = false;
                 foreach ($options['additional_delimiters'] as $delim) {
-                    if (strpos($v, $delim) !== false) {
+                    if (str_contains($v, $delim)) {
                         $found = true;
                         break;
                     }
@@ -1409,15 +1426,19 @@ class AppController extends Controller
             }
         }
         /** @var TmpFileTool $final */
-        $final = $model->restSearch($user, $returnFormat, $filters, false, false, $elementCounter, $renderView);
+        $skippedElementsCounter = 0;
+        $final = $model->restSearch($user, $returnFormat, $filters, false, false, $elementCounter, $renderView, $skippedElementsCounter);
         if ($renderView) {
             $this->layout = false;
             $final = JsonTool::decode($final->intoString());
             $this->set($final);
             $this->render('/Events/module_views/' . $renderView);
         } else {
+            if (!empty($filters['sign'])) {
+                $this->RestResponse->signContents = true;
+            }
             $filename = $this->RestSearch->getFilename($filters, $scope, $responseType);
-            $headers = ['X-Result-Count' => $elementCounter, 'X-Export-Module-Used' => $returnFormat, 'X-Response-Format' => $responseType];
+            $headers = ['X-Result-Count' => $elementCounter, 'X-Export-Module-Used' => $returnFormat, 'X-Response-Format' => $responseType, 'X-Skipped-Elements-Count' => $skippedElementsCounter];
             return $this->RestResponse->viewData($final, $responseType, false, true, $filename, $headers);
         }
     }

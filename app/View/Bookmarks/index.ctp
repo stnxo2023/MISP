@@ -27,6 +27,11 @@
             'data_path' => 'Bookmark.url',
         ],
         [
+            'name' => __('Comment'),
+            'sort' => 'Bookmark.comment',
+            'data_path' => 'Bookmark.comment',
+        ],
+        [
             'name' => __('Exposed to Organsation'),
             'title' => __('Is this bookmark exposed to all users belonging to the bookmark\'s organisation'),
             'sort' => 'Bookmark.exposed_to_org',
@@ -92,7 +97,7 @@
                     ],
                     [
                         'class' => 'modal-open',
-                        'url' => $baseurl . '/bookmarks/delete/',
+                        'url' => $baseurl . '/bookmarks/delete',
                         'url_params_data_paths' => 'Bookmark.id',
                         'icon' => 'trash',
                         'title' => __('Delete'),

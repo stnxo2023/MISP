@@ -1547,7 +1547,7 @@ class AttributesController extends AppController
 
             $this->Session->write('search_attributes_filters', null);
         }
-        if (!empty($filters)) {
+        if (!empty($filters) || $this->request->is('post')) {
             $filters['includeCorrelations'] = 1;
             $params = $this->Attribute->restSearch($user, 'json', $filters, true);
             if (!isset($params['conditions']['Attribute.deleted'])) {
@@ -1560,7 +1560,10 @@ class AttributesController extends AppController
             }
 
             $this->paginate['conditions'] = $params['conditions'];
-            $this->paginate['ignoreIndexHint'] = 'deleted';
+            $index = $this->Attribute->query("SHOW index from attributes where Key_name = 'deleted'");
+            if (!empty($index)) {
+                $this->paginate['ignoreIndexHint'] = 'deleted';
+            }
             $attributes = $this->paginate();
             $this->Attribute->attachTagsToAttributes($attributes, ['includeAllTags' => true]);
 
@@ -2620,9 +2623,15 @@ class AttributesController extends AppController
                                 if (empty($tagCollection)) {
                                     return new CakeResponse(array('body'=> json_encode(array('saved' => false, 'errors' => 'Invalid Tag Collection.')), 'status'=>200, 'type' => 'json'));
                                 }
-                                $tag_id_list = array_column($tagCollection[0]['TagCollectionTag'], 'tag_id');
-                            } else {
+                                $tag_id_list = array_merge($tag_id_list, array_column($tagCollection[0]['TagCollectionTag'], 'tag_id'));
+                            } else if(is_numeric($tag_id)){
                                 $tag_id_list[] = $tag_id;
+                            } else {
+                                $tagId = $this->Attribute->AttributeTag->Tag->lookupTagIdForUser($this->Auth->user(), trim($tag_id));
+                                if (empty($tagId)) {
+                                    return new CakeResponse(array('body'=> json_encode(array('saved' => false, 'errors' => 'Invalid Tag.')), 'status'=>200, 'type' => 'json'));
+                                }
+                                $tag_id_list[] = $tagId;
                             }
                         }
                     } else {

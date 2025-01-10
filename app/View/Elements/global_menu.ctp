@@ -15,7 +15,7 @@ if (!empty($me)) {
     $topbarBookmarks = [];
     foreach ($bookmarks as $bookmark) {
         $topbarBookmarks[] = [
-            'html' => sprintf('<i class="fas fa-link fa-fw"></i> %s', h($bookmark['Bookmark']['name'])),
+            'html' => sprintf('<span title="%s"><i class="fas fa-link fa-fw"></i> %s</span>', h($bookmark['Bookmark']['comment']), h($bookmark['Bookmark']['name'])),
             'url' => h($bookmark['Bookmark']['url']),
         ];
     }
@@ -68,6 +68,13 @@ if (!empty($me)) {
                     'text' => __('List Collections'),
                     'url' => $baseurl . '/collections/index'
                 ),
+                [
+                    'type' => 'separator'
+                ],
+                [
+                    'text' => __('List Event Reports'),
+                    'url' => $baseurl . '/event_reports/index'
+                ],
                 [
                     'type' => 'separator'
                 ],
@@ -521,8 +528,8 @@ if (!empty($me)) {
                 ),
                 array(
                     'text' => __('Search Logs'),
-                    'url' => $baseurl . '/admin/logs/search',
-                    'requirement' => $this->Acl->canAccess('logs', 'admin_search')
+                    'url' => $baseurl . '/logs/search',
+                    'requirement' => $this->Acl->canAccess('logs', 'search')
                 )
             )
         ),
@@ -542,6 +549,13 @@ if (!empty($me)) {
             )
         )
     );
+    $logo = '<span class="logoBlueStatic bold" id="smallLogo">MISP</span>';
+    $today = date('md');
+    if ($today >= 1222 && $today <= 1226) {
+        $logo = '<span class="logoBlueStatic bold" id="smallLogo" title="' . __('Happy holidays!') .'">M🎄SP</span>';
+    } else if ($today == 1231 || $today = 0101) {
+        $logo = '<span class="logoBlueStatic bold" id="smallLogo" title="' . __('Happy New Year!') .'">🎉 MISP 🎉</span>';
+    }
     $menu_right = array(
         array(
             'type' => 'root',
@@ -562,7 +576,7 @@ if (!empty($me)) {
         array(
             'type' => 'root',
             'url' => empty($homepage['path']) ? $baseurl : $baseurl . h($homepage['path']),
-            'html' => '<span class="logoBlueStatic bold" id="smallLogo">MISP</span>'
+            'html' => $logo
         ),
         [
             'type' => 'root',

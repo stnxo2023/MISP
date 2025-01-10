@@ -10,6 +10,7 @@ App::uses('Oidc', 'OidcAuth.Lib');
  *  - OidcAuth.authentication_method
  *  - OidcAuth.code_challenge_method
  *  - OidcAuth.role_mapper
+ *  - OidcAuth.scopes (array, default: []) - request additional scopes ex. 'scopes' => ['profile', 'email']
  *  - OidcAuth.organisation_property (default: `organization`)
  *  - OidcAuth.organisation_uuid_property (default: `organization_uuid`)
  *  - OidcAuth.roles_property (default: `roles`)
@@ -30,6 +31,16 @@ class OidcAuthenticate extends BaseAuthenticate
     public function authenticate(CakeRequest $request, CakeResponse $response)
     {
         $userModel = ClassRegistry::init($this->settings['userModel']);
+        $headers = $response->header();
+        if($headers) {
+            foreach($headers as $name=>$value) {
+                if ($value === null) {
+                    header($name);
+                } else {
+                    header("{$name}: {$value}");
+                }
+            }
+        }
         $oidc = new Oidc($userModel);
         return $oidc->authenticate($this->settings);
     }

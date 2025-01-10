@@ -27,12 +27,14 @@ class LogsController extends AppController
         // No need for CSRF tokens for a search
         if ('admin_search' === $this->request->params['action']) {
             $this->Security->csrfCheck = false;
+            $this->Security->unlockedActions[] = 'admin_search';
         }
     }
 
     public function index()
     {
         $paramArray = array('id', 'title', 'created', 'model', 'model_id', 'action', 'user_id', 'change', 'email', 'org', 'description', 'ip');
+        $passedArgs = $this->passedArgs;
         $filterData = array(
             'request' => $this->request,
             'named_params' => $this->request->params['named'],
@@ -130,7 +132,10 @@ class LogsController extends AppController
         }
         $this->set('validFilters', $validFilters);
         $this->set('filter', isset($this->params['named']['filter']) ? $this->params['named']['filter'] : false);
-        $this->set('list', $this->paginate());
+        $this->set('data', $this->paginate());
+        $this->set('paramArray', $paramArray);
+        $this->set('passedArgsArray', $passedArgs);
+        $this->set('menuData', ['menuList' => 'logs', 'menuItem' => 'index']);
     }
 
     public function admin_index()
@@ -260,187 +265,28 @@ class LogsController extends AppController
         $this->set('mayModify', $mayModify);
     }
 
-    public function admin_search($new = false)
+    public function search()
     {
-        $orgRestriction = null;
-        if ($this->_isSiteAdmin()) {
-            $orgRestriction = false;
-        } else {
-            $orgRestriction = $this->Auth->user('Organisation')['name'];
-        }
-        $this->set('orgRestriction', $orgRestriction);
-        $validFilters = $this->Log->logMeta;
-        if ($this->_isSiteAdmin()) {
-            $validFilters = array_merge_recursive($validFilters, $this->Log->logMetaAdmin);
-        }
-        $this->set('validFilters', $validFilters);
-        $this->set('filters', false);
-        if ($new !== false) {
-            $this->set('actionDefinitions', $this->{$this->defaultModel}->actionDefinitions);
+        $this->set('orgRestriction', $this->_isSiteAdmin() ? false : $this->Auth->user('Organisation')['name']);
+        $models = $this->Log->searchModelList;
+        sort($models);
+        $models = array('' => 'ALL') + $this->_arrayToValuesIndexArray($models);
+        $actions = array('' => 'ALL') + $this->_arrayToValuesIndexArray($this->Log->validate['action']['rule'][1]);
+        $this->set('dropdownData', [
+            'model' => $models,
+            'actions' => $actions
 
-            // reset the paginate_conditions
-            //$this->Session->write('paginate_conditions_log', array());
-            if ($this->request->is('post')) {
-                $filters['email'] = $this->request->data['Log']['email'];
-                if (!$orgRestriction) {
-                    $filters['org'] = $this->request->data['Log']['org'];
-                } else {
-                    $filters['org'] = $this->Auth->user('Organisation')['name'];
-                }
-                $filters['action'] = $this->request->data['Log']['action'];
-                $filters['model'] = $this->request->data['Log']['model'];
-                $filters['model_id'] = $this->request->data['Log']['model_id'];
-                $filters['title'] = $this->request->data['Log']['title'];
-                if (!empty ($this->request->data['Log']['from'])) {
-                    $filters['from'] = $this->request->data['Log']['from'];
-                }
-                if (!empty ($this->request->data['Log']['to'])) {
-                    $filters['to'] = $this->request->data['Log']['to'];
-                }
-                $filters['change'] = $this->request->data['Log']['change'];
-                if (Configure::read('MISP.log_client_ip')) {
-                    $filters['ip'] = $this->request->data['Log']['ip'];
-                }
-
-                // for info on what was searched for
-                $this->set('emailSearch', $filters['email']);
-                $this->set('orgSearch', $filters['org']);
-                $this->set('actionSearch', $filters['action']);
-                $this->set('modelSearch', $filters['model']);
-                $this->set('model_idSearch', $filters['model_id']);
-                $this->set('titleSearch', $filters['title']);
-                $this->set('fromSearch', $filters['from'] ?? null);
-                $this->set('toSearch', $filters['to'] ?? null);
-                $this->set('changeSearch', $filters['change']);
-                if (Configure::read('MISP.log_client_ip')) {
-                    $this->set('ipSearch', $filters['ip']);
-                }
-                $this->set('isSearch', 1);
-
-                // search the db
-                $conditions = $this->__buildSearchConditions($filters);
-                $this->{$this->defaultModel}->recursive = 0;
-                $this->paginate = array(
-                    'limit' => 60,
-                    'conditions' => $conditions,
-                    'order' => array('Log.id' => 'DESC')
-                );
-                $list = $this->paginate();
-                if (empty($this->Auth->user('Role')['perm_site_admin'])) {
-                    $list = $this->Log->filterSiteAdminSensitiveLogs($list);
-                }
-                $this->set('list', $list);
-
-                if ($this->_isRest()) {
-                    return $this->RestResponse->viewData($list, $this->response->type());
-                } else {
-                    // and store into session
-                    $this->Session->write('paginate_conditions_log', $this->paginate);
-                    $this->Session->write('paginate_conditions_log_email', $filters['email']);
-                    $this->Session->write('paginate_conditions_log_org', $filters['org']);
-                    $this->Session->write('paginate_conditions_log_action', $filters['action']);
-                    $this->Session->write('paginate_conditions_log_model', $filters['model']);
-                    $this->Session->write('paginate_conditions_log_model_id', $filters['model_id']);
-                    $this->Session->write('paginate_conditions_log_title', $filters['title']);
-                    $this->Session->write('paginate_conditions_log_change', $filters['change']);
-                    $this->Session->write('paginate_conditions_log_from', $filters['from'] ?? null);
-                    $this->Session->write('paginate_conditions_log_to', $filters['to'] ?? null);
-                    if (Configure::read('MISP.log_client_ip')) {
-                        $this->Session->write('paginate_conditions_log_ip', $filters['ip']);
-                    }
-                    // set the same view as the index page
-                    $this->render('index');
-                }
-            } else {
-                // get from Session
-                $filters['email'] = $this->Session->read('paginate_conditions_log_email');
-                $filters['org'] = $this->Session->read('paginate_conditions_log_org');
-                $filters['action'] = $this->Session->read('paginate_conditions_log_action');
-                $filters['model'] = $this->Session->read('paginate_conditions_log_model');
-                $filters['model_id'] = $this->Session->read('paginate_conditions_log_model_id');
-                $filters['title'] = $this->Session->read('paginate_conditions_log_title');
-                $filters['change'] = $this->Session->read('paginate_conditions_log_change');
-                $filters['from'] = $this->Session->read('paginate_conditions_log_from') ?? null;
-                $filters['to'] = $this->Session->read('paginate_conditions_log_to') ?? null;
-                if (Configure::read('MISP.log_client_ip')) {
-                    $filters['ip'] = $this->Session->read('paginate_conditions_log_ip');
-                }
-                // for info on what was searched for
-                $this->set('emailSearch', $filters['email']);
-                $this->set('orgSearch', $filters['org']);
-                $this->set('actionSearch', $filters['action']);
-                $this->set('modelSearch', $filters['model']);
-                $this->set('model_idSearch', $filters['model_id']);
-                $this->set('titleSearch', $filters['title']);
-                $this->set('changeSearch', $filters['change']);
-                $this->set('changeSearch', $filters['from'] ?? null);
-                $this->set('changeSearch', $filters['to'] ?? null);
-                if (Configure::read('MISP.log_client_ip')) {
-                    $this->set('ipSearch', $filters['ip']);
-                }
-                $this->set('isSearch', 1);
-
-                // re-get pagination
-                $this->{$this->defaultModel}->recursive = 0;
-                $this->paginate = array_replace_recursive($this->paginate, $this->Session->read('paginate_conditions_log'));
-                if (!isset($this->paginate['order'])) {
-                    $this->paginate['order'] = array('Log.id' => 'DESC');
-                }
-                $conditions = $this->__buildSearchConditions($filters);
-                $this->paginate['conditions'] = $conditions;
-                $list = $this->paginate();
-                if (empty($this->Auth->user('Role')['perm_site_admin'])) {
-                    $list = $this->Log->filterSiteAdminSensitiveLogs($list);
-                }
-                $this->set('list', $list);
-
-                // set the same view as the index page
-                $this->render('index');
-            }
-        } else {
-            // no search keyword is given, show the search form
-
-            // combobox for actions
-            $actions = array('' => array('ALL' => 'ALL'), 'actions' => array());
-            $actions['actions'] = array_merge($actions['actions'], $this->_arrayToValuesIndexArray($this->{$this->defaultModel}->validate['action']['rule'][1]));
-            $this->set('actions', $actions);
-
-            // combobox for models
-            $models = [
-                'Attribute',
-                'Allowedlist',
-                'AuthKey',
-                'Event',
-                'EventBlocklist',
-                'EventTag',
-                'Feed',
-                'DecayingModel',
-                'EventGraph',
-                'EventReport',
-                'MispObject',
-                'Organisation',
-                'Post',
-                'Regexp',
-                'Role',
-                'Server',
-                'ShadowAttribute',
-                'SharingGroup',
-                'Tag',
-                'Task',
-                'Taxonomy',
-                'Template',
-                'Thread',
-                'User',
-                'Galaxy',
-                'GalaxyCluster',
-                'GalaxyClusterRelation',
-                'Workflow',
-            ];
-            sort($models);
-            $models = array('' => 'ALL') + $this->_arrayToValuesIndexArray($models);
-            $this->set('models', $models);
-            $this->set('actionDefinitions', $this->{$this->defaultModel}->actionDefinitions);
-        }
+        ]);
+        $this->set('models', $models);
+        $this->set('fieldDesc', [
+            'email' => __('The e-mail address of the user that triggered the log entry.'),
+            'org' => __('The organisation name of the user that triggered the log entry (at the time when the entry was added).'),
+            'model' => __('The log entry\'s target object type. When a modification to a user is made, this would be "User".'),
+            'model_id' => __('The log entry\'s target object ID. When a modification to a specific attribute is made, this would be the Attribute\'s local ID.'),
+            'from' => __('Format is YYYY-MM-DD'),
+            'to' => __('Format is YYYY-MM-DD')
+        ]);
+        $this->set('menuData', ['menuList' => 'logs', 'menuItem' => 'search']);
     }
 
     private function __buildSearchConditions($filters)
@@ -452,7 +298,7 @@ class LogsController extends AppController
         if (isset($filters['org']) && !empty($filters['org'])) {
             $conditions['LOWER(Log.org) LIKE'] = '%' . strtolower($filters['org']) . '%';
         }
-        if ($filters['action'] != 'ALL') {
+        if ($filters['action'] != 'ALL' && $filters['action'] !== null) {
             $conditions['Log.action'] = $filters['action'];
         }
         if ($filters['model'] != '') {
@@ -467,11 +313,16 @@ class LogsController extends AppController
         if (isset($filters['change']) && !empty($filters['change'])) {
             $conditions['LOWER(Log.change) LIKE'] = '%' . strtolower($filters['change']) . '%';
         }
-        if (isset($filters['from']) && !empty($filters['from'])) {
-            $conditions['Log.created >='] = $filters['from'];
-        }
-        if (isset($filters['to']) && !empty($filters['to'])) {
-            $conditions['Log.created <='] = $filters['to'];
+        foreach (['from' => '>=', 'to' => '<='] as $keyword => $operator) {
+            if (!empty($filters[$keyword])) {
+                $date = $filters[$keyword];
+                if (!empty($filters[$keyword . '_time'])) {
+                    $date .= ' ' . $filters[$keyword . '_time'];
+                } else {
+                    $date .= ' ' . ($keyword == 'from' ? '00:00:00': '23:59:59');
+                }
+                $conditions['Log.created ' . $operator] = $date;
+            }
         }
         if (Configure::read('MISP.log_client_ip') && isset($filters['ip']) && !empty($filters['ip'])) {
             $conditions['Log.ip LIKE'] = '%' . $filters['ip'] . '%';
