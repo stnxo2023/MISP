@@ -202,6 +202,7 @@ If experiencing issues when configuring MISP to use LDAPS, try:
 
 * If you are using a self-signed certificate, ensure the CN matches the host name of the LDAP server, otherwise the TLS session will fail.
 
+* If you are using a custom CA cert (ldapTlsCustomCaCert) please ensure the certificate file is readable by the php user (`www-data` or `apache` depending on the system).
 
 #### Debugging
 
