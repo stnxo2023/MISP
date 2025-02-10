@@ -3727,8 +3727,10 @@ class Event extends AppModel
                     $event['Event']['Object'][$i] = $this->updatedLockedFieldForAnalystData($event['Event']['Object'][$i]);
                 }
                 if (!empty($event['Event']['Object'][$i])) {
-                    for ($j=0; $j < count($event['Event']['Object'][$i]['Attribute']); $j++) {
-                        $event['Event']['Object'][$i]['Attribute'][$j] = $this->updatedLockedFieldForAnalystData($event['Event']['Object'][$i]['Attribute'][$j]);
+                    if (!empty($event['Event']['Object'][$i]['Attribute'])) {
+                        for ($j=0; $j < count($event['Event']['Object'][$i]['Attribute']); $j++) {
+                            $event['Event']['Object'][$i]['Attribute'][$j] = $this->updatedLockedFieldForAnalystData($event['Event']['Object'][$i]['Attribute'][$j]);
+                        }
                     }
                 }
             }
@@ -5683,8 +5685,10 @@ class Event extends AppModel
         foreach ($objects as $k => $object) {
             if ($object['objectType'] === 'object') {
                 $object_notes[] = $object['uuid'];
-                foreach ($object['Attribute'] as $a) {
-                    $attribute_notes[] = $a['uuid'];
+                if (!empty($object['Attribute'])) {
+                    foreach ($object['Attribute'] as $a) {
+                        $attribute_notes[] = $a['uuid'];
+                    }
                 }
             } else if ($object['objectType'] === 'attribute') {
                 $attribute_notes[] = $object['uuid'];
@@ -5697,9 +5701,11 @@ class Event extends AppModel
                 if (!empty($object_notes[$object['uuid']])) {
                     $objects[$k] = array_merge($object, $object_notes[$object['uuid']]);
                 }
-                foreach ($object['Attribute'] as $k2 => $a) {
-                    if (!empty($attribute_notes[$a['uuid']])) {
-                        $objects[$k]['Attribute'][$k2] = array_merge($a, $attribute_notes[$a['uuid']]);
+                if (!empty($object['Attribute'])) {
+                    foreach ($object['Attribute'] as $k2 => $a) {
+                        if (!empty($attribute_notes[$a['uuid']])) {
+                            $objects[$k]['Attribute'][$k2] = array_merge($a, $attribute_notes[$a['uuid']]);
+                        }
                     }
                 }
             } else if ($object['objectType'] === 'attribute') {
@@ -6125,9 +6131,9 @@ class Event extends AppModel
      * @throws InvalidArgumentException
      * @throws Exception
      */
-    public function upload_stix(array $user, $file, $stixVersion, $originalFile, $publish, $distribution, $sharingGroupId, $galaxiesAsTags, $clusterDistribution, $clusterSharingGroupId, $debug = false)
+    public function upload_stix(array $user, $file, $stixVersion, $originalFile, $publish, $distribution, $sharingGroupId, $forceContextualData, $galaxiesAsTags, $clusterDistribution, $clusterSharingGroupId, $debug = false)
     {
-        $decoded = $this->convertStixToMisp($stixVersion, $file, $distribution, $sharingGroupId, $galaxiesAsTags, $clusterDistribution, $clusterSharingGroupId, $user['Organisation']['uuid'], $debug);
+        $decoded = $this->convertStixToMisp($stixVersion, $file, $distribution, $sharingGroupId, $forceContextualData, $galaxiesAsTags, $clusterDistribution, $clusterSharingGroupId, $user['Organisation']['uuid'], $debug);
 
         if (!empty($decoded['success'])) {
             $data = JsonTool::decodeArray($decoded['converted']);
@@ -6190,6 +6196,7 @@ class Event extends AppModel
      * @param string $file Path to STIX file
      * @param int $distribution
      * @param int|null $sharingGroupId
+     * @param bool $forceContextualData
      * @param bool $galaxiesAsTags
      * @param int $clusterDistribution
      * @param int|null $clusterSharingGroupId
@@ -6198,7 +6205,7 @@ class Event extends AppModel
      * @return array
      * @throws Exception
      */
-    private function convertStixToMisp($stixVersion, $file, $distribution, $sharingGroupId, $galaxiesAsTags, $clusterDistribution, $clusterSharingGroupId, $orgUuid, $debug)
+    private function convertStixToMisp($stixVersion, $file, $distribution, $sharingGroupId, $forceContextualData, $galaxiesAsTags, $clusterDistribution, $clusterSharingGroupId, $orgUuid, $debug)
     {
         $scriptDir = APP . 'files' . DS . 'scripts';
         if ($stixVersion === '2' || $stixVersion === '2.0' || $stixVersion === '2.1') {
@@ -6209,17 +6216,20 @@ class Event extends AppModel
                 $scriptFile,
                 '-i', $file,
                 '--distribution', $distribution,
-                '--org_uuid', $orgUuid
+                '--org-uuid', $orgUuid
             ];
             if ($distribution == 4) {
-                array_push($shellCommand, '--sharing_group_id', $sharingGroupId);
+                array_push($shellCommand, '--sharing-group-id', $sharingGroupId);
+            }
+            if ($forceContextualData) {
+                $shellCommand[] = '--force-contextual-data';
             }
             if ($galaxiesAsTags) {
-                $shellCommand[] = '--galaxies_as_tags';
+                $shellCommand[] = '--galaxies-as-tags';
             } else {
-                array_push($shellCommand, '--cluster_distribution', $clusterDistribution);
+                array_push($shellCommand, '--cluster-distribution', $clusterDistribution);
                 if ($clusterDistribution == 4) {
-                    array_push($shellCommand, '--cluster_sharing_group_id', $clusterSharingGroupId);
+                    array_push($shellCommand, '--cluster-sharing-group-id', $clusterSharingGroupId);
                 }
             }
             if ($debug) {
