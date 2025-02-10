@@ -228,6 +228,7 @@ class GalaxyClustersController extends AppController
         if (empty($galaxy)) {
             throw new NotFoundException(__('Invalid galaxy'));
         }
+        $galaxyId = $galaxy['Galaxy']['id'];
         $this->loadModel('Attribute');
         $distributionLevels = $this->Attribute->distributionLevels;
         unset($distributionLevels[5]);
