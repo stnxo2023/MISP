@@ -4096,7 +4096,7 @@ class Event extends AppModel
         }
     }
 
-    private function addAttributeToCorrelationDedupTable(array &$value_table, int|null $object_id, int $attribute_id, array $attribute, array $compositeTypes): void
+    private function addAttributeToCorrelationDedupTable(array &$value_table, $object_id, int $attribute_id, array $attribute, array $compositeTypes): void
     {
         $values = [];
         // we need to build our little internal value table with composite types in mind
